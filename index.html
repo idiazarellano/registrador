@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Registrador</title>
 <meta name="theme-color" content="#f4f3ee">
 <meta name="mobile-web-app-capable" content="yes">
@@ -188,6 +193,8 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .dayhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .dayhead button{padding:6px 10px;border-radius:8px;background:var(--surface-2);font-weight:800}
 </style>
+</head>
+<body>
 
 <div id="app">
   <main id="view"></main>
@@ -717,3 +724,5 @@ if('serviceWorker' in navigator&&location.protocol==='https:'&&!window.claude){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 </script>
+</body>
+</html>
