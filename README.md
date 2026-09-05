@@ -2,11 +2,29 @@
 
 Aplicación web de un solo archivo (`index.html`) para registrar en qué dedicas tu tiempo cada día.
 
+## Archivos
+
+- `index.html`: toda la aplicación.
+- `manifest.webmanifest`: hace que Chrome la instale como app completa (icono, pantalla completa).
+- `sw.js`: service worker; permite abrirla sin conexión. Red primero, caché de respaldo.
+- `icon-*.png`: iconos de la app.
+
+## Alojamiento y publicación
+
+La app se sirve desde GitHub Pages, rama `main`, raíz del repositorio. Publicar una versión nueva:
+
+```bash
+cd ~/Apps/Registrador
+git add -A && git commit -m "descripción del cambio" && git push
+```
+
+GitHub Pages tarda uno o dos minutos en servir la versión nueva. En el móvil, cerrar y abrir la app la recarga.
+
 ## Instalar en el móvil
 
-1. Abre el enlace del artefacto en Chrome (Android).
-2. Menú ⋮ → "Añadir a pantalla de inicio" (o "Instalar aplicación").
-3. Se abre con su propio icono, como una app más.
+1. Abre la dirección de GitHub Pages en Chrome (Android).
+2. Menú ⋮ → "Instalar aplicación" (o "Añadir a pantalla de inicio").
+3. Aparece en la lista de apps del launcher como una app más.
 
 ## Dónde viven los datos
 
