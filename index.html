@@ -105,6 +105,7 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
 .chip{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border-radius:12px;background:var(--surface);text-align:left;border:2px solid transparent;transition:transform .08s}
 .chip:active{transform:scale(.97)}
+.chip{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .chip .dot{width:12px;height:12px}
 .icon{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;font-size:16px;flex:none;line-height:1}
 .icon.big{width:38px;height:38px;font-size:20px;border-radius:11px}
@@ -294,6 +295,7 @@ const pad=n=>String(n).padStart(2,'0');
 function fmtTime(ms){const d=new Date(ms);return pad(d.getHours())+':'+pad(d.getMinutes());}
 function fmtDur(ms,long){
   const m=Math.round(ms/MIN), h=Math.floor(m/60), r=m%60;
+  if(h>=24){const d=Math.floor(h/24);return `${d} d ${h%24} h`;}
   if(long) return h?`${h} h ${pad(r)} min`:`${r} min`;
   return h?`${h}h ${pad(r)}`:`${r} min`;
 }
@@ -465,10 +467,12 @@ function viewHoy(){
     </div>`
   :`<div class="card now-panel"><div class="now-head"><span class="idle">Nada en marcha. Toca una categoría para empezar a contar.</span></div>
      ${(()=>{const last=[...data.entries].sort((a,b)=>endOf(b)-endOf(a))[0];
-        if(!(last&&last.end!=null&&Date.now()-last.end>=STEP()*MIN&&Date.now()-last.end<12*HOUR)) return '';
+        if(!(last&&last.end!=null&&Date.now()-last.end>=STEP()*MIN)) return '';
+        const gap=Date.now()-last.end, sameDay=dayKey(last.end)===dayKey(Date.now());
+        const when=sameDay?`las <strong class="num">${fmtTime(last.end)}</strong>`:`el <strong>${fmtDayLong(last.end)}</strong> a las <strong class="num">${fmtTime(last.end)}</strong>`;
         if(state.startFrom===last.end) return `<div class="gaphint armed"><span class="grow">Toca una categoría: empezará a las <strong class="num">${fmtTime(last.end)}</strong>.</span><button class="btn sm ghost" data-act="startfrom-cancel">Cancelar</button></div>`;
-        return `<div class="gaphint"><span class="grow">Desde las <strong class="num">${fmtTime(last.end)}</strong> hay <strong class="num">${fmtDur(Date.now()-last.end)}</strong> sin registrar.</span>
-          <span class="row"><button class="btn sm" data-gap-start="${last.end}" data-gap-end="${roundTo(Date.now())}">Rellenar</button><button class="btn sm primary" data-act="startfrom" data-ms="${last.end}">Seguir desde las ${fmtTime(last.end)}</button></span></div>`;})()}
+        return `<div class="gaphint"><span class="grow">Desde ${when} hay <strong class="num">${fmtDur(gap)}</strong> sin registrar.</span>
+          <span class="row"><button class="btn sm" data-gap-start="${last.end}" data-gap-end="${roundTo(Date.now())}">Rellenar</button>${gap<HOUR?`<button class="btn sm primary" data-act="startfrom" data-ms="${last.end}">Seguir desde las ${fmtTime(last.end)}</button>`:''}</span></div>`;})()}
    </div>`;
   return `<div class="topbar"><h1>${fmtDayLong(ds)}</h1><span class="sub num">${total?fmtDur(total)+' registradas':''}</span></div>
     ${banner}
@@ -582,7 +586,7 @@ function renderSheet(){
     const dur=endMs-ed.start;
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Editar registro">
       <div class="handle"></div>
-      <div class="sheet-head"><h2>${ed.isNew?'Nuevo registro':'Editar registro'}</h2><span class="sub num" style="color:var(--ink-2);font-size:13px">${fmtDayLong(dayStart(ed.start))}</span></div>
+      <div class="sheet-head"><h2>${ed.isNew?'Nuevo registro':'Editar registro'}</h2><span class="sub num" style="color:var(--ink-2);font-size:13px">${fmtDayLong(dayStart(ed.start))}${ed.end!=null&&dayKey(ed.end)!==dayKey(ed.start)?' → '+fmtDayLong(dayStart(ed.end)):''}</span></div>
       <div class="field"><div class="label">Categoría</div><div class="catpick">${data.categories.filter(c=>!c.archived||c.id===ed.cat).map(c=>`<button data-pick="${c.id}" class="${c.id===ed.cat?'on':''}"><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</button>`).join('')}</div></div>
       ${real&&p&&p.cat===ed.cat&&ed.start-endOf(p)<=STEP()*MIN?`<div class="row"><button class="btn sm ghost" data-act="edit-merge-prev">Unir con la anterior (${fmtTime(p.start)}–${fmtTime(endOf(p))})</button></div>`:''}
       <div class="field"><div class="row spread"><div class="label">Inicio</div>${p&&Math.abs(ed.start-endOf(p))>MIN?`<button class="linkbtn" data-snap="start" data-ms="${endOf(p)}">= fin de la anterior (${fmtTime(endOf(p))})</button>`:''}</div>${timeRow('start',ed.start)}</div>
@@ -631,7 +635,7 @@ document.addEventListener('click',ev=>{
   const d=t.dataset;
   if(t.hasAttribute('data-close')&&t===ev.target||t.matches('button[data-close]')){closeSheet();return;}
   if(d.view){state.view=d.view;render();return;}
-  if(d.start){startCategory(d.start);return;}
+  if(d.start){ if(lp.fired){lp.fired=false;return;} startCategory(d.start);return;}
   if(d.edit){const e=data.entries.find(x=>x.id===d.edit);if(e)openEditor(e);return;}
   if(d.gapStart){openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start:+d.gapStart,end:+d.gapEnd});return;}
   if(d.adj){const r=running();if(!r)return;const ns=r.start+(+d.adj)*MIN;if(ns>roundTo(Date.now())){toast('El inicio no puede ser futuro');return;}r.start=ns;save();render();return;}
@@ -711,6 +715,16 @@ document.addEventListener('change',ev=>{
     fr.readAsText(t.files[0]); t.value='';
   }
 });
+// Pulsación larga (500 ms) sobre una categoría de la pantalla principal: abre su edición.
+let lp={timer:null,fired:false,x:0,y:0};
+document.addEventListener('pointerdown',ev=>{
+  const chip=ev.target.closest('.chip[data-start]'); if(!chip) return;
+  lp.fired=false; lp.x=ev.clientX; lp.y=ev.clientY;
+  lp.timer=setTimeout(()=>{lp.fired=true; if(navigator.vibrate) navigator.vibrate(15); const c=catById(chip.dataset.start); state.catEdit={id:c.id,name:c.name,color:c.color,icon:c.icon||''}; state.sheet='cat'; renderSheet();},500);
+});
+document.addEventListener('pointermove',ev=>{ if(lp.timer&&Math.hypot(ev.clientX-lp.x,ev.clientY-lp.y)>10){clearTimeout(lp.timer);lp.timer=null;} });
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(lp.timer);lp.timer=null;}));
+document.addEventListener('contextmenu',ev=>{ if(ev.target.closest('.chip[data-start]')) ev.preventDefault(); });
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&state.sheet)closeSheet();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)render();});
 window.addEventListener('storage',ev=>{if(ev.key===KEY){data=load();render();}});
