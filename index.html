@@ -343,7 +343,7 @@ function startCategory(catId){
     // detenido hace menos de un paso: se empalma con el fin del anterior
     const last=[...data.entries].filter(e=>e.end!=null).sort((a,b)=>b.end-a.end)[0];
     if(last&&Date.now()-last.end<STEP()*MIN&&last.end<=now){
-      if(last.cat===catId){ last.end=null; save(); render(); toast('Reanudado: la pausa no se cuenta'); return; }
+      if(last.cat===catId){ state.resume={id:last.id,cat:catId,now}; state.sheet='resume'; renderSheet(); return; }
       now=last.end; toast('Empalmado con el anterior ('+fmtTime(last.end)+')');
     }
   }
@@ -634,6 +634,14 @@ function renderSheet(){
       <p style="margin:0;color:var(--ink-2);font-size:14px">Tiene ${cd.n} registros. Los registros nunca se borran: elige a qué categoría pasarlos. Si solo quieres que deje de aparecer, usa Archivar.</p>
       <div class="catpick">${data.categories.filter(x=>x.id!==cd.id).map(x=>`<button data-deltarget="${x.id}" class="${x.id===cd.target?'on':''}"><i class="dot" style="background:${x.color}"></i>${esc(x.name)}</button>`).join('')}</div>
       <div class="row end"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm danger" data-act="catdel-go">Mover y eliminar</button></div></div></div>`;
+  } else if(state.sheet==='resume'){
+    const rs=state.resume, last=data.entries.find(e=>e.id===rs.id), c=catById(rs.cat);
+    o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Continuar">
+      <div class="handle"></div><h2>${esc(c.name)} terminó a las <span class="num">${fmtTime(last.end)}</span></h2>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">Han pasado ${fmtDur(Date.now()-last.end,true)}. ¿Continuar ese registro o empezar uno nuevo dejando el hueco?</p>
+      <button class="btn primary" data-act="resume-continue">Continuar desde las ${fmtTime(last.end)}</button>
+      <button class="btn" data-act="resume-gap">Dejar hueco y empezar a las ${fmtTime(rs.now)}</button>
+      <button class="btn ghost" data-close>Cancelar</button></div></div>`;
   } else if(state.sheet==='import'){
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Restaurar copia">
       <div class="handle"></div><h2>Restaurar copia</h2>
@@ -643,7 +651,7 @@ function renderSheet(){
       <button class="btn ghost" data-close>Cancelar</button></div></div>`;
   }
 }
-function closeSheet(){state.sheet=null;state.editing=null;state.catEdit=null;state.catDel=null;renderSheet();}
+function closeSheet(){state.sheet=null;state.editing=null;state.catEdit=null;state.catDel=null;state.resume=null;renderSheet();}
 
 /* ============ Eventos ============ */
 document.addEventListener('click',ev=>{
@@ -672,6 +680,8 @@ document.addEventListener('click',ev=>{
   switch(d.act){
     case 'stop': stopRunning(); break;
     case 'startfrom': state.startFrom=+d.ms; render(); break;
+    case 'resume-continue': {const rs=state.resume,last=data.entries.find(e=>e.id===rs.id); if(last){last.end=null;} closeSheet(); save(); render(); break;}
+    case 'resume-gap': {const rs=state.resume; data.entries.push({id:uid(),cat:rs.cat,start:rs.now,end:null}); sortEntries(); closeSheet(); save(); render(); break;}
     case 'startfrom-cancel': state.startFrom=null; render(); break;
     case 'edit-cats': state.view='ajustes'; render(); window.scrollTo(0,0); break;
     case 'join-prev': {const r=running();const p=prevEntry(r);if(p){r.start=endOf(p);save();render();}break;}
