@@ -61,7 +61,7 @@ Regla de la inserción: los dos vecinos se ajustan al nuevo registro (se acortan
 
 ## Tiempo sin registrar
 
-Bajo la barra del día (en Hoy y en el día seleccionado de Registros) y en Totales · N días aparece "Sin registrar": la suma de los huecos entre registros (y, si es hoy y no hay nada en marcha, desde el último registro hasta ahora). Su porcentaje se muestra como "+X %" respecto al tiempo registrado, porque va aparte y no forma parte del 100 %. En los días de descanso no se cuenta.
+Bajo la barra del día seleccionado en Registros y en Totales · N días aparece "Sin registrar": la suma de los huecos entre registros (y, si es hoy y no hay nada en marcha, desde el último registro hasta ahora). Su porcentaje se muestra como "+X %" respecto al tiempo registrado, porque va aparte y no forma parte del 100 %. En los días de descanso no se cuenta.
 
 ## Formato del JSON
 

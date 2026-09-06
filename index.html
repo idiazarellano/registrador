@@ -605,7 +605,7 @@ function viewHoy(){
    </div>`;
   return `<div class="topbar"><h1>${fmtDayLong(ds)}</h1><span class="row" style="gap:8px;align-items:baseline"><span class="sub num">${total?fmtDur(total)+' registradas':''}</span>${restBtn(ds)}</span></div>
     ${banner}
-    <div>${dayBarHTML(ds)}${dayTotalsHTML(ds)}</div>
+    <div>${dayBarHTML(ds)}</div>
     ${nowPanel}
     <div class="section-head"><h2>Categorías</h2><button class="linkbtn" data-act="edit-cats">Editar</button></div>
     <div class="catgrid">${activeCats().map(c=>`<button class="chip ${r&&r.cat===c.id?'on':''}" data-start="${c.id}">${iconOrDot(c)}<span class="name">${esc(c.name)}</span>${tot.get(c.id)?`<span class="tot num">${fmtDur(tot.get(c.id))}</span>`:''}</button>`).join('')}
