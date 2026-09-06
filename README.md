@@ -42,7 +42,8 @@ GitHub Pages tarda uno o dos minutos en servir la versión nueva. En el móvil, 
 
 - Ajustes → Copia de seguridad. La copia es un JSON con todo (categorías, registros, ajustes) que se guarda en Descargas del móvil.
 - Con el aviso diario activado, al abrir la app aparece un botón "Guardar copia" si hay registros nuevos desde la última copia.
-- "Exportar CSV" genera una tabla (fecha, inicio, fin, categoría, minutos) para hojas de cálculo.
+- "Exportar CSV" genera una tabla (fecha, inicio, fin, categoría, minutos, descanso) para hojas de cálculo.
+- **Días de descanso.** El botón 🌴 junto a la fecha (en Hoy o en Registros) marca el día. Las medias de Totales solo cuentan los días que no son de descanso, y en esos días no se avisa de huecos sin registrar.
 
 ## Formato del JSON
 
@@ -51,6 +52,7 @@ GitHub Pages tarda uno o dos minutos en servir la versión nueva. En el móvil, 
   "schema": 1,
   "categories": [{"id": "c1", "name": "Trabajo", "color": "#2a78d6"}],
   "entries": [{"id": "abc", "cat": "c1", "start": 1757059200000, "end": 1757062800000}],
+  "restDays": ["2026-09-06"],
   "settings": {"autoBackup": true, "theme": "system"},
   "meta": {"created": 0, "updated": 0, "lastBackup": 0, "lastBackupUpdated": 0}
 }

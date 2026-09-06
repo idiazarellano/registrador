@@ -158,6 +158,10 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .dayrows{display:flex;flex-direction:column;gap:6px}
 .dayrow{display:grid;grid-template-columns:56px 1fr 52px;gap:10px;align-items:center;width:100%;text-align:left;padding:4px 6px;border-radius:8px}
 .dayrow.on{background:var(--surface-2)}
+.dayrow.rest .d{color:var(--ink-3)}
+.dayrow.rest .d::before{content:'🌴 '}
+.restbtn{font-size:12px;font-weight:700;color:var(--ink-3);padding:4px 8px;border-radius:8px;border:1px solid var(--surface-2);white-space:nowrap}
+.restbtn.on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .dayrow .d{font-size:12px;font-weight:700;color:var(--ink-2);line-height:1.15}
 .dayrow .d small{display:block;font-weight:500;color:var(--ink-3)}
 .dayrow .h{font-size:12px;color:var(--ink-2);text-align:right}
@@ -249,6 +253,7 @@ function defaultData(){
       {id:'c7',name:'Deporte',color:'#3fa34d',icon:'🏃'},
       {id:'c8',name:'Sueño',color:'#6b7280',icon:'😴'}],
     entries:[],
+    restDays:[],
     settings:{autoBackup:true,theme:'system',granularity:5},
     meta:{created:Date.now(),updated:Date.now(),lastBackup:0,lastBackupUpdated:0}};
 }
@@ -257,6 +262,7 @@ function migrate(d){
   if(!d.schema) d.schema=1;
   d.categories=Array.isArray(d.categories)?d.categories:[];
   d.entries=Array.isArray(d.entries)?d.entries:[];
+  d.restDays=Array.isArray(d.restDays)?d.restDays:[];
   d.settings=Object.assign({autoBackup:true,theme:'system',granularity:5},d.settings||{});
   for(const c of d.categories){ if(c.icon==null) c.icon=''; if(c.archived==null) c.archived=false; }
   d.meta=Object.assign({created:Date.now(),updated:0,lastBackup:0,lastBackupUpdated:0},d.meta||{});
@@ -386,10 +392,10 @@ async function saveFile(filename,text){
 function exportJSON(){return JSON.stringify(Object.assign({},data,{exported:new Date().toISOString(),app:'Registrador'}),null,1);}
 function exportCSV(){
   const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
-  const lines=['fecha,inicio,fin,categoria,minutos,id'];
+  const lines=['fecha,inicio,fin,categoria,minutos,id,descanso'];
   for(const e of [...data.entries].sort((a,b)=>a.start-b.start)){
     const en=endOf(e);
-    lines.push([dayKey(e.start),new Date(e.start).toISOString(),e.end==null?'':new Date(e.end).toISOString(),q(catById(e.cat).name),Math.round((en-e.start)/MIN),e.id].join(','));
+    lines.push([dayKey(e.start),new Date(e.start).toISOString(),e.end==null?'':new Date(e.end).toISOString(),q(catById(e.cat).name),Math.round((en-e.start)/MIN),e.id,isRest(e.start)?1:0].join(','));
   }
   return lines.join('\n');
 }
@@ -407,6 +413,7 @@ function importJSON(text,mode){
     const cats=new Map(data.categories.map(c=>[c.id,c])); for(const c of d.categories) if(!cats.has(c.id)) data.categories.push(c);
     const ids=new Map(data.entries.map(e=>[e.id,e]));
     let n=0; for(const e of d.entries){ if(!ids.has(e.id)){data.entries.push(e);n++;} }
+    for(const k of d.restDays) if(!data.restDays.includes(k)) data.restDays.push(k);
     toast(`${n} registros añadidos`);
   }
   sortEntries(); save(); render();
@@ -462,6 +469,9 @@ function entriesListHTML(ds,withGaps){
   });
   return `<div class="entries">${html}</div>`;
 }
+function isRest(ds){return data.restDays.includes(dayKey(ds));}
+function toggleRest(ds){const k=dayKey(ds);if(isRest(ds))data.restDays=data.restDays.filter(x=>x!==k);else data.restDays.push(k);save();}
+function restBtn(ds){return `<button class="restbtn ${isRest(ds)?'on':''}" data-rest="${ds}" aria-pressed="${isRest(ds)}" title="Marcar como día de descanso">🌴 Descanso</button>`;}
 function todayTotals(ds){const m=new Map();for(const s of segmentsOfDay(ds)) m.set(s.e.cat,(m.get(s.e.cat)||0)+s.ms);return m;}
 
 function totalsHoyHTML(tot,total){
@@ -495,14 +505,14 @@ function viewHoy(){
     </div>`
   :`<div class="card now-panel"><div class="now-head"><span class="idle">Nada en marcha. Toca una categoría para empezar a contar.</span></div>
      ${(()=>{const last=[...data.entries].sort((a,b)=>endOf(b)-endOf(a))[0];
-        if(!(last&&last.end!=null&&Date.now()-last.end>=STEP()*MIN)) return '';
+        if(isRest(Date.now())||!(last&&last.end!=null&&Date.now()-last.end>=STEP()*MIN)) return '';
         const gap=Date.now()-last.end, sameDay=dayKey(last.end)===dayKey(Date.now());
         const when=sameDay?`las <strong class="num">${fmtTime(last.end)}</strong>`:`el <strong>${fmtDayLong(last.end)}</strong> a las <strong class="num">${fmtTime(last.end)}</strong>`;
         if(state.startFrom===last.end) return `<div class="gaphint armed"><span class="grow">Toca una categoría: empezará a las <strong class="num">${fmtTime(last.end)}</strong>.</span><button class="btn sm ghost" data-act="startfrom-cancel">Cancelar</button></div>`;
         return `<div class="gaphint"><span class="grow">Desde ${when} hay <strong class="num">${fmtDur(gap)}</strong> sin registrar.</span>
           <span class="row"><button class="btn sm" data-gap-start="${last.end}" data-gap-end="${roundTo(Date.now())}">Rellenar</button>${gap<HOUR?`<button class="btn sm primary" data-act="startfrom" data-ms="${last.end}">Seguir desde las ${fmtTime(last.end)}</button>`:''}</span></div>`;})()}
    </div>`;
-  return `<div class="topbar"><h1>${fmtDayLong(ds)}</h1><span class="sub num">${total?fmtDur(total)+' registradas':''}</span></div>
+  return `<div class="topbar"><h1>${fmtDayLong(ds)}</h1><span class="row" style="gap:8px;align-items:baseline"><span class="sub num">${total?fmtDur(total)+' registradas':''}</span>${restBtn(ds)}</span></div>
     ${banner}
     <div>${dayBarHTML(ds)}</div>
     ${nowPanel}
@@ -511,7 +521,7 @@ function viewHoy(){
       <button class="chip add" data-act="new-cat">+ Categoría</button></div>
     ${totalsHoyHTML(tot,total)}
     <div class="section-head"><h2>Registros de hoy</h2><button class="linkbtn" data-act="manual">+ Añadir a mano</button></div>
-    ${entriesListHTML(ds,true)}`;
+    ${entriesListHTML(ds,!isRest(ds))}`;
 }
 
 function viewRegistros(){
@@ -523,21 +533,23 @@ function viewRegistros(){
   for(const ds of days){for(const s of segmentsOfDay(ds)){tot.set(s.e.cat,(tot.get(s.e.cat)||0)+s.ms);sum+=s.ms;}}
   const rows=[...tot.entries()].map(([id,ms])=>({c:catById(id),ms})).sort((a,b)=>b.ms-a.ms);
   const max=rows.length?rows[0].ms:1;
-  const daysWith=days.filter(ds=>segmentsOfDay(ds).length).length||1;
+  const workDays=days.filter(ds=>!isRest(ds)&&segmentsOfDay(ds).length);
+  const restCount=days.filter(isRest).length;
+  let workSum=0;for(const ds of workDays)for(const s of segmentsOfDay(ds))workSum+=s.ms;
   return `<div class="topbar"><h1>Registros</h1></div>
     <div class="seg-control">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${state.range===k}">${k} días</button>`).join('')}</div>
     <section class="card">
       <div class="section-head"><h2>Día a día</h2><span class="label">0 → 24 h</span></div>
       <div class="dayrows" style="margin-top:10px">${days.map(ds=>{
         let t=0;for(const s of segmentsOfDay(ds))t+=s.ms;const d=new Date(ds);
-        return `<button class="dayrow ${state.selDay===ds?'on':''}" data-day="${ds}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span><span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
+        return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''}" data-day="${ds}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span><span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
       <div class="ticks" style="padding-left:66px;padding-right:62px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
       <div class="legend" style="margin-top:10px">${data.categories.filter(c=>tot.has(c.id)).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>
     </section>
     <section class="card">
-      <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><h2 style="font-size:14px;font-weight:800">${fmtDayLong(state.selDay)}</h2><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
+      <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><span class="row" style="gap:8px;align-items:center;justify-content:center;flex:1"><h2 style="font-size:14px;font-weight:800">${fmtDayLong(state.selDay)}</h2>${restBtn(state.selDay)}</span><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
       <div style="margin:10px 0 12px">${dayBarHTML(state.selDay)}</div>
-      ${entriesListHTML(state.selDay,true)}
+      ${entriesListHTML(state.selDay,!isRest(state.selDay))}
       <div class="row end" style="margin-top:10px"><button class="linkbtn" data-act="manual-day">+ Añadir registro este día</button></div>
     </section>
     <section class="card">
@@ -546,7 +558,8 @@ function viewRegistros(){
         <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
         <span class="v num">${fmtDur(r.ms)} · ${Math.round(r.ms/sum*100)} %</span>
         <span class="bar"><i style="width:${r.ms/max*100}%;background:${r.c.color}"></i></span>
-        <span class="sub num">media ${fmtDur(r.ms/daysWith)} por día con registros</span></div>`).join(''):'<p class="empty">Sin registros en este periodo.</p>'}</div>
+        <span class="sub num">${(()=>{let w=0;for(const ds of workDays)for(const s of segmentsOfDay(ds))if(s.e.cat===r.c.id)w+=s.ms;return workDays.length&&w?`media ${fmtDur(w/workDays.length)} por día${restCount?' (sin contar los de descanso)':' con registros'}`:'solo en días de descanso';})()}</span></div>`).join(''):'<p class="empty">Sin registros en este periodo.</p>'}
+      ${restCount?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:12px">🌴 ${restCount} ${restCount===1?'día de descanso':'días de descanso'} en el periodo, con ${fmtDur(sum-workSum)} registradas. Las medias se calculan sobre los ${workDays.length} días restantes con registros.</p>`:''}</div>
     </section>`;
 }
 
@@ -683,6 +696,7 @@ document.addEventListener('click',ev=>{
   if(d.move){const act=activeCats();const i=act.findIndex(c=>c.id===d.move),j=i+(+d.dir);if(j<0||j>=act.length)return;const gi=data.categories.indexOf(act[i]),gj=data.categories.indexOf(act[j]);[data.categories[gi],data.categories[gj]]=[data.categories[gj],data.categories[gi]];save();render();return;}
   if(d.unarchive){catById(d.unarchive).archived=false;save();render();return;}
   if(d.gran){data.settings.granularity=+d.gran;save();render();return;}
+  if(d.rest){toggleRest(+d.rest);render();toast(isRest(+d.rest)?'Marcado como día de descanso':'Ya no es día de descanso');return;}
   // sheet: editor
   if(d.pick){state.editing.cat=d.pick;renderSheet();return;}
   if(d.deltarget){state.catDel.target=d.deltarget;renderSheet();return;}
