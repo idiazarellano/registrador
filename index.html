@@ -184,6 +184,14 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .trow .bar{grid-column:1/-1;height:10px;border-radius:4px;background:var(--surface-2);overflow:hidden}
 .trow .bar i{display:block;height:100%;border-radius:4px}
 .trow .sub{grid-column:1/-1;font-size:11px;color:var(--ink-3)}
+.trow.unassigned{margin-top:2px;padding-top:10px;border-top:1px dashed var(--line)}
+.trow.unassigned .n{color:var(--ink-2);font-weight:600}
+.dot.hollow{background:transparent!important;border:1.5px dashed var(--ink-3);box-sizing:border-box}
+.daytot{margin:10px 0 12px;font-size:12px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 12px}
+.daytot span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.daytot b{font-weight:700;color:var(--ink)}
+.daytot .pct{color:var(--ink-3)}
+.daytot .un{color:var(--ink-3);font-style:italic}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink-2)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend .dot{width:9px;height:9px}
@@ -397,7 +405,7 @@ function resolveOverlaps(e){
     const xe=endOf(x);
     if(xe<=e.start||x.start>=en) continue;            // sin solape
     if(x.start<e.start&&xe>e.start){ x.end=e.start; }   // anterior: se acorta por el final
-    else if(x.start<en&&xe>en&&x.end!=null){ x.start=en; } // siguiente: empieza más tarde
+    else if(x.start<en&&xe>en){ x.start=en; }              // siguiente (aunque esté en marcha): empieza más tarde
     else if(x.end!=null){ data.entries=data.entries.filter(y=>y!==x); msg.push('eliminado '+catById(x.cat).name); continue; } // cubierto del todo
     if(x.end!=null&&x.end<=x.start){ data.entries=data.entries.filter(y=>y!==x); msg.push('eliminado '+catById(x.cat).name); }
     else msg.push('ajustado '+catById(x.cat).name);
@@ -405,18 +413,24 @@ function resolveOverlaps(e){
   return msg.length?'Registro anterior '+msg.join(', '):'';
 }
 function deleteEntry(id){data.entries=data.entries.filter(e=>e.id!==id);save();}
-/* Texto con lo que resolveOverlaps haría al guardar `ed` (sin tocar nada). */
+/* Texto con lo que pasará a los demás registros al guardar `ed`: se simula el guardado sobre una copia. */
 function overlapPreview(ed){
-  const en=ed.end==null?Date.now():ed.end; if(en<=ed.start) return '';
-  const out=[];
-  for(const x of data.entries){
-    if(x.id===ed.id) continue;
-    const xe=endOf(x), a=Math.max(x.start,ed.start), b=Math.min(xe,en);
-    if(b-a<MIN) continue;
-    const name=catById(x.cat).name;
-    if(x.start>=ed.start&&xe<=en) out.push('se elimina '+name+' ('+fmtTime(x.start)+'–'+fmtTime(xe)+')');
-    else out.push(name+' −'+fmtDur(b-a));
-  }
+  const en=ed.end==null?Date.now():ed.end; if(en-ed.start<MIN) return '';
+  const real=data.entries; let out=[];
+  try{
+    data.entries=JSON.parse(JSON.stringify(real));
+    let target=ed.id?data.entries.find(x=>x.id===ed.id):null;
+    if(target){target.cat=ed.cat;target.start=ed.start;target.end=ed.end;} else {target={id:'__preview',cat:ed.cat,start:ed.start,end:ed.end};data.entries.push(target);}
+    jointFill(ed,target,true); resolveOverlaps(target);
+    for(const x of real){
+      if(x.id===ed.id) continue;
+      const y=data.entries.find(z=>z.id===x.id), name=catById(x.cat).name;
+      if(!y){out.push('se elimina '+name+' ('+fmtTime(x.start)+'–'+fmtTime(endOf(x))+')');continue;}
+      const d=(endOf(y)-y.start)-(endOf(x)-x.start);
+      if(Math.abs(d)>=MIN) out.push(name+' '+(d<0?'−':'+')+fmtDur(Math.abs(d)));
+    }
+  }catch(_){ out=[]; }
+  data.entries=real;
   return out.join(', ');
 }
 
@@ -550,6 +564,27 @@ function entriesListHTML(ds,withGaps){
 function isRest(ds){return data.restDays.includes(dayKey(ds));}
 function toggleRest(ds){const k=dayKey(ds);if(isRest(ds))data.restDays=data.restDays.filter(x=>x!==k);else data.restDays.push(k);save();}
 function restBtn(ds){return `<button class="restbtn ${isRest(ds)?'on':''}" data-rest="${ds}" aria-pressed="${isRest(ds)}" title="Marcar como día de descanso">🌴 Descanso</button>`;}
+/* Huecos entre registros de un día (y, si es hoy y no hay nada en marcha, desde el último hasta ahora).
+   En días de descanso no se cuenta. No forma parte del total registrado. */
+function unassignedOfDay(ds){
+  if(isRest(ds)) return 0;
+  const de=dayEnd(ds), segs=entriesOfDay(ds).map(e=>[Math.max(e.start,ds),Math.min(endOf(e),de)]).filter(x=>x[1]>x[0]).sort((a,b)=>a[0]-b[0]);
+  if(!segs.length) return 0;
+  let u=0, cur=segs[0][1];
+  for(const [a,b] of segs.slice(1)){ if(a>cur) u+=a-cur; if(b>cur) cur=b; }
+  if(dayKey(ds)===dayKey(Date.now())&&!running()){ const now=Date.now(); if(now>cur) u+=now-cur; }
+  return u;
+}
+function unassignedRowHTML(u,sum){
+  if(!u||!sum) return '';
+  return `<div class="trow unassigned"><span class="n"><i class="dot hollow"></i>Tiempo sin asignar</span><span class="v num">${fmtDur(u)} · +${Math.round(u/sum*100)} %</span><span class="sub">Huecos entre registros. Va aparte: no forma parte del 100 %.</span></div>`;
+}
+function dayTotalsHTML(ds){
+  const tot=todayTotals(ds); let total=0; tot.forEach(v=>total+=v);
+  if(!total) return '';
+  const rows=[...tot.entries()].map(([id,ms])=>({c:catById(id),ms})).sort((a,b)=>b.ms-a.ms), u=unassignedOfDay(ds);
+  return `<div class="daytot"><span><b class="num">${fmtDur(total)}</b> en total</span>${rows.map(r=>`<span><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)} <b class="num">${fmtDur(r.ms)}</b><span class="pct num">${Math.round(r.ms/total*100)} %</span></span>`).join('')}${u?`<span class="un">sin asignar <b class="num">${fmtDur(u)}</b><span class="pct num">+${Math.round(u/total*100)} %</span></span>`:''}</div>`;
+}
 function todayTotals(ds){const m=new Map();for(const s of segmentsOfDay(ds)) m.set(s.e.cat,(m.get(s.e.cat)||0)+s.ms);return m;}
 
 function totalsHoyHTML(tot,total){
@@ -561,7 +596,7 @@ function totalsHoyHTML(tot,total){
       <div class="totals" style="margin-top:12px">${rows.map(r=>`<div class="trow">
         <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
         <span class="v num">${fmtDur(r.ms)} · ${Math.round(r.ms/total*100)} %</span>
-        <span class="bar"><i style="width:${r.ms/max*100}%;background:${r.c.color}"></i></span></div>`).join('')}</div>
+        <span class="bar"><i style="width:${r.ms/max*100}%;background:${r.c.color}"></i></span></div>`).join('')}${unassignedRowHTML(unassignedOfDay(dayStart(Date.now())),total)}</div>
     </section>`;
 }
 function viewHoy(){
@@ -627,6 +662,7 @@ function viewRegistros(){
     <section class="card">
       <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><span class="row" style="gap:8px;align-items:center;justify-content:center;flex:1"><h2 style="font-size:14px;font-weight:800">${fmtDayLong(state.selDay)}</h2>${restBtn(state.selDay)}</span><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
       <div style="margin:10px 0 12px">${dayBarHTML(state.selDay)}</div>
+      ${dayTotalsHTML(state.selDay)}
       ${entriesListHTML(state.selDay,!isRest(state.selDay))}
       <div class="row end" style="margin-top:10px"><button class="linkbtn" data-act="manual-day">+ Añadir registro este día</button></div>
     </section>
@@ -636,7 +672,7 @@ function viewRegistros(){
         <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
         <span class="v num">${fmtDur(r.ms)} · ${Math.round(r.ms/sum*100)} %</span>
         <span class="bar"><i style="width:${r.ms/max*100}%;background:${r.c.color}"></i></span>
-        <span class="sub num">${(()=>{let w=0;for(const ds of workDays)for(const s of segmentsOfDay(ds))if(s.e.cat===r.c.id)w+=s.ms;return workDays.length&&w?`media ${fmtDur(w/workDays.length)} por día${restCount?' (sin contar los de descanso)':' con registros'}`:'solo en días de descanso';})()}</span></div>`).join(''):'<p class="empty">Sin registros en este periodo.</p>'}
+        <span class="sub num">${(()=>{let w=0;for(const ds of workDays)for(const s of segmentsOfDay(ds))if(s.e.cat===r.c.id)w+=s.ms;return workDays.length&&w?`media ${fmtDur(w/workDays.length)} por día${restCount?' (sin contar los de descanso)':' con registros'}`:'solo en días de descanso';})()}</span></div>`).join('')+unassignedRowHTML(days.reduce((a,ds)=>a+unassignedOfDay(ds),0),sum):'<p class="empty">Sin registros en este periodo.</p>'}
       ${restCount?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:12px">🌴 ${restCount} ${restCount===1?'día de descanso':'días de descanso'} en el periodo, con ${fmtDur(sum-workSum)} registradas. Las medias se calculan sobre los ${workDays.length} días restantes con registros.</p>`:''}</div>
     </section>`;
 }
@@ -685,6 +721,51 @@ function render(){
 function openEditor(entry){
   state.editing={id:entry.id,cat:entry.cat,start:entry.start,end:entry.end,isNew:!entry.id};
   state.sheet='edit'; renderSheet();
+}
+/* Insertar en la unión `t` de dos registros seguidos: el nuevo empieza con duración 0 y
+   recordamos los vecinos para que, al guardar, ningún minuto quede sin dueño. */
+function openInsertEditor(t){
+  const prev=data.entries.filter(e=>e.end!=null&&e.end<=t).sort((a,b)=>b.end-a.end)[0];
+  const next=data.entries.filter(e=>e.start>=t).sort((a,b)=>a.start-b.start)[0];
+  openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start:t,end:t});
+  state.editing.joint={prev:prev?prev.id:null,next:next?next.id:null};
+}
+/* Inserción en una unión: los dos vecinos se ajustan al nuevo registro (se acortan o se alargan)
+   para que ningún minuto quede sin dueño, siempre que entre medias no haya otro registro.
+   Se aplica ANTES de resolveOverlaps, que se ocupa del resto. Con apply=false solo describe. */
+function jointFill(ed,target,apply){
+  const j=ed.joint; if(!j) return [];
+  const ts=target.start, en=target.end==null?Date.now():target.end, out=[];
+  // extensión de x tal como quedará tras resolveOverlaps (null si el nuevo lo cubre entero)
+  const clipped=x=>{ if(x===target||x.id===target.id) return null; const xe=endOf(x);
+    if(xe<=ts||x.start>=en) return [x.start,xe];
+    if(x.start<ts) return [x.start,ts];
+    if(xe>en) return [en,xe];
+    return null; };
+  const prev=data.entries.find(e=>e.id===j.prev), next=data.entries.find(e=>e.id===j.next);
+  // vecinos que se ajustarán aquí (y por tanto no cuentan como "otro registro" entre medias)
+  const prevAdj=!!(prev&&prev.end!=null&&prev.start<ts), nextAdj=!!(next&&next!==prev&&endOf(next)>en);
+  const between=(a,b)=>data.entries.some(x=>{ if((x===prev&&prevAdj)||(x===next&&nextAdj)) return false; const c=clipped(x); return c&&c[0]<b&&c[1]>a; });
+  if(prevAdj&&prev.end!==ts){
+    if(prev.end>ts){ out.push(catById(prev.cat).name+' acaba a las '+fmtTime(ts)); if(apply) prev.end=ts; }
+    else if(!between(prev.end,ts)){ out.push(catById(prev.cat).name+' se alarga hasta las '+fmtTime(ts)); if(apply) prev.end=ts; }
+  }
+  if(nextAdj&&next.start!==en){
+    if(next.start<en){ out.push(catById(next.cat).name+' empieza a las '+fmtTime(en)); if(apply) next.start=en; }
+    else if(!between(en,next.start)){ out.push(catById(next.cat).name+' empieza a las '+fmtTime(en)); if(apply) next.start=en; }
+  }
+  return out;
+}
+function saveEditing(){
+  const ed=state.editing; if(!ed) return false;
+  if(ed.end!=null&&ed.end<ed.start) return false;
+  if(ed.start>roundTo(Date.now())){toast('El inicio no puede ser futuro');return false;}
+  let target;
+  if(ed.isNew){ if(ed.end==null) ed.end=roundTo(Date.now()); if(ed.end-ed.start<MIN){toast('Duración mínima: 1 minuto');return false;} target={id:uid(),cat:ed.cat,start:ed.start,end:ed.end}; data.entries.push(target); }
+  else { target=data.entries.find(x=>x.id===ed.id); if(target){target.cat=ed.cat;target.start=ed.start;target.end=ed.end;} }
+  let m='';
+  if(target){ const f=jointFill(ed,target,true); m=resolveOverlaps(target); if(f.length) m=f.join(', ')+(m?'. '+m:''); }
+  sortEntries(); save(); closeSheet(); render(); if(m) toast(m); return true;
 }
 function newManualEntry(ds){
   const now=Date.now();
@@ -800,7 +881,7 @@ document.addEventListener('click',ev=>{
   if(d.unarchive){catById(d.unarchive).archived=false;save();render();return;}
   if(d.gran){data.settings.granularity=+d.gran;save();render();return;}
   if(d.bmode){data.settings.backupMode=d.bmode;save();render();return;}
-  if(d.insert){openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start:+d.insert,end:+d.insert});return;}
+  if(d.insert){openInsertEditor(+d.insert);return;}
   if(d.rest){toggleRest(+d.rest);render();toast(isRest(+d.rest)?'Marcado como día de descanso':'Ya no es día de descanso');return;}
   // sheet: editor
   if(d.pick){state.editing.cat=d.pick;renderSheet();return;}
@@ -843,14 +924,7 @@ document.addEventListener('click',ev=>{
       e.start=p.start; deleteEntry(p.id); state.editing.start=e.start; save(); renderSheet(); toast('Registros unidos'); break; }
     case 'edit-stop': {const e=data.entries.find(x=>x.id===state.editing.id);if(e){e.end=Math.max(e.start+STEP()*MIN,roundTo(Date.now()));state.editing.end=e.end;save();renderSheet();}break;}
     case 'edit-delete': if(confirm('¿Eliminar este registro?')){deleteEntry(state.editing.id);closeSheet();render();} break;
-    case 'edit-save': {
-      const ed=state.editing; if(ed.end!=null&&ed.end<ed.start) return;
-      if(ed.start>roundTo(Date.now())){toast('El inicio no puede ser futuro');return;}
-      let target;
-      if(ed.isNew){ if(ed.end==null) ed.end=roundTo(Date.now()); if(ed.end-ed.start<MIN){toast('Duración mínima: 1 minuto');return;} target={id:uid(),cat:ed.cat,start:ed.start,end:ed.end}; data.entries.push(target); }
-      else { target=data.entries.find(x=>x.id===ed.id); if(target){target.cat=ed.cat;target.start=ed.start;target.end=ed.end;} }
-      const m=target?resolveOverlaps(target):'';
-      sortEntries(); save(); closeSheet(); render(); if(m) toast(m); break; }
+    case 'edit-save': saveEditing(); break;
     case 'cat-save': {
       const name=$('#catName').value.trim(); if(!name){toast('Escribe un nombre');return;}
       const icon=$('#catIcon').value.trim();

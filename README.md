@@ -54,7 +54,13 @@ GitHub Pages tarda uno o dos minutos en servir la versión nueva. En el móvil, 
 
 ## Insertar un registro donde no hay hueco
 
-En la lista de registros, entre dos registros seguidos aparece un círculo "+". Abre el editor con un registro nuevo de duración cero en esa unión; con −X en el inicio o +X en el fin se le da duración, y la línea "Al guardar: …" muestra a qué vecinos se recorta.
+En la lista de registros, entre dos registros seguidos aparece un círculo "+". Abre el editor con un registro nuevo de duración cero en esa unión; con −X en el inicio o +X en el fin se le da duración, y la línea "Al guardar: …" muestra cómo cambian los demás.
+
+Regla de la inserción: los dos vecinos se ajustan al nuevo registro (se acortan o se alargan) para que ningún minuto quede sin dueño. Si el nuevo ocupa 08:45–08:55 en la unión de las 09:00, el anterior acaba a las 08:45 y el siguiente empieza a las 08:55. Solo se alarga un vecino si no hay otro registro entre medias. Las ediciones normales siguen igual: recortan a los vecinos pero nunca los alargan, así que pueden dejar hueco a propósito.
+
+## Tiempo sin asignar
+
+En Totales de hoy, en la línea de totales del día seleccionado en Registros y en Totales · N días aparece "Tiempo sin asignar": la suma de los huecos entre registros (y, si es hoy y no hay nada en marcha, desde el último registro hasta ahora). Su porcentaje se muestra como "+X %" respecto al tiempo registrado, porque va aparte y no forma parte del 100 %. En los días de descanso no se cuenta.
 
 ## Formato del JSON
 
