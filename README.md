@@ -8,6 +8,7 @@ Aplicación web de un solo archivo (`index.html`) para registrar en qué dedicas
 - `manifest.webmanifest`: hace que Chrome la instale como app completa (icono, pantalla completa).
 - `sw.js`: service worker; permite abrirla sin conexión. Red primero, caché de respaldo.
 - `icon-*.png`: iconos de la app.
+- `tests/`: pruebas de la lógica (migración, fronteras de registros, borrado, papelera). Se ejecutan con `tests/run.sh` (necesita `gjs`, incluido en GNOME).
 
 ## Alojamiento y publicación
 
@@ -58,9 +59,9 @@ En la lista de registros, entre dos registros seguidos aparece un círculo "+". 
 
 Regla de la inserción: los dos vecinos se ajustan al nuevo registro (se acortan o se alargan) para que ningún minuto quede sin dueño. Si el nuevo ocupa 08:45–08:55 en la unión de las 09:00, el anterior acaba a las 08:45 y el siguiente empieza a las 08:55. Solo se alarga un vecino si no hay otro registro entre medias. Las ediciones normales siguen igual: recortan a los vecinos pero nunca los alargan, así que pueden dejar hueco a propósito.
 
-## Tiempo sin asignar
+## Tiempo sin registrar
 
-En Totales de hoy, en la línea de totales del día seleccionado en Registros y en Totales · N días aparece "Tiempo sin asignar": la suma de los huecos entre registros (y, si es hoy y no hay nada en marcha, desde el último registro hasta ahora). Su porcentaje se muestra como "+X %" respecto al tiempo registrado, porque va aparte y no forma parte del 100 %. En los días de descanso no se cuenta.
+Bajo la barra del día (en Hoy y en el día seleccionado de Registros) y en Totales · N días aparece "Sin registrar": la suma de los huecos entre registros (y, si es hoy y no hay nada en marcha, desde el último registro hasta ahora). Su porcentaje se muestra como "+X %" respecto al tiempo registrado, porque va aparte y no forma parte del 100 %. En los días de descanso no se cuenta.
 
 ## Formato del JSON
 

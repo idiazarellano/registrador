@@ -187,7 +187,7 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .trow.unassigned{margin-top:2px;padding-top:10px;border-top:1px dashed var(--line)}
 .trow.unassigned .n{color:var(--ink-2);font-weight:600}
 .dot.hollow{background:transparent!important;border:1.5px dashed var(--ink-3);box-sizing:border-box}
-.daytot{margin:10px 0 12px;font-size:12px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 12px}
+.daytot{margin:10px 0 0;font-size:12px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 12px}
 .daytot span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .daytot b{font-weight:700;color:var(--ink)}
 .daytot .pct{color:var(--ink-3)}
@@ -206,10 +206,6 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .list .catrow > button.grow{display:flex;align-items:center;gap:12px;padding:8px 0;text-align:left}
 .list .mv{width:36px;height:36px;border-radius:8px;background:var(--surface-2);font-size:11px;color:var(--ink-2);flex:none}
 .list .mv:disabled{opacity:.3}
-.switch{width:44px;height:26px;border-radius:13px;background:var(--surface-3);position:relative;flex:none}
-.switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);transition:left .15s}
-.switch[aria-checked="true"]{background:var(--accent)}
-.switch[aria-checked="true"]::after{left:21px}
 .banner{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--accent-soft);font-size:13px}
 .banner .grow{flex:1}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;z-index:40;box-shadow:var(--shadow);max-width:90vw;text-align:center}
@@ -435,13 +431,7 @@ function overlapPreview(ed){
 }
 
 /* ============ Copias de seguridad y exportación ============ */
-let dl=null; // capacidad de descarga cuando la página se ve dentro de claude.ai
-if(window.claude&&typeof window.claude.use==='function'){window.claude.use('downloads').then(ns=>{dl=ns;}).catch(()=>{});}
 async function saveFile(filename,text){
-  if(dl){
-    try{await dl.save({filename,data:text});return true;}
-    catch(e){ if(e&&e.code==='declined') return false; toast('No se pudo guardar: '+(e&&e.message||e)); return false; }
-  }
   const blob=new Blob([text],{type:'application/octet-stream'});
   const url=URL.createObjectURL(blob), a=document.createElement('a');
   a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
@@ -577,32 +567,20 @@ function unassignedOfDay(ds){
 }
 function unassignedRowHTML(u,sum){
   if(!u||!sum) return '';
-  return `<div class="trow unassigned"><span class="n"><i class="dot hollow"></i>Tiempo sin asignar</span><span class="v num">${fmtDur(u)} · +${Math.round(u/sum*100)} %</span><span class="sub">Huecos entre registros. Va aparte: no forma parte del 100 %.</span></div>`;
+  return `<div class="trow unassigned"><span class="n"><i class="dot hollow"></i>Sin registrar</span><span class="v num">${fmtDur(u)} · +${Math.round(u/sum*100)} %</span><span class="sub">Huecos entre registros. Va aparte del 100 %.</span></div>`;
 }
 function dayTotalsHTML(ds){
   const tot=todayTotals(ds); let total=0; tot.forEach(v=>total+=v);
   if(!total) return '';
   const rows=[...tot.entries()].map(([id,ms])=>({c:catById(id),ms})).sort((a,b)=>b.ms-a.ms), u=unassignedOfDay(ds);
-  return `<div class="daytot"><span><b class="num">${fmtDur(total)}</b> en total</span>${rows.map(r=>`<span><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)} <b class="num">${fmtDur(r.ms)}</b><span class="pct num">${Math.round(r.ms/total*100)} %</span></span>`).join('')}${u?`<span class="un">sin asignar <b class="num">${fmtDur(u)}</b><span class="pct num">+${Math.round(u/total*100)} %</span></span>`:''}</div>`;
+  return `<div class="daytot"><span><b class="num">${fmtDur(total)}</b> en total</span>${rows.map(r=>`<span><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)} <b class="num">${fmtDur(r.ms)}</b><span class="pct num">${Math.round(r.ms/total*100)} %</span></span>`).join('')}${u?`<span class="un">sin registrar <b class="num">${fmtDur(u)}</b><span class="pct num">+${Math.round(u/total*100)} %</span></span>`:''}</div>`;
 }
 function todayTotals(ds){const m=new Map();for(const s of segmentsOfDay(ds)) m.set(s.e.cat,(m.get(s.e.cat)||0)+s.ms);return m;}
 
-function totalsHoyHTML(tot,total){
-  const rows=[...tot.entries()].map(([id,ms])=>({c:catById(id),ms})).sort((a,b)=>b.ms-a.ms);
-  if(!rows.length) return '';
-  const max=rows[0].ms;
-  return `<section class="card">
-      <div class="section-head"><h2>Totales de hoy</h2><span class="sub num" style="font-size:12px;color:var(--ink-2)">${fmtDur(total)} en total</span></div>
-      <div class="totals" style="margin-top:12px">${rows.map(r=>`<div class="trow">
-        <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
-        <span class="v num">${fmtDur(r.ms)} · ${Math.round(r.ms/total*100)} %</span>
-        <span class="bar"><i style="width:${r.ms/max*100}%;background:${r.c.color}"></i></span></div>`).join('')}${unassignedRowHTML(unassignedOfDay(dayStart(Date.now())),total)}</div>
-    </section>`;
-}
 function viewHoy(){
   const ds=dayStart(Date.now()), r=running(), tot=todayTotals(ds);
   let total=0; tot.forEach(v=>total+=v);
-  const banner=backupPending()?`<div class="banner"><span class="grow">Hay registros nuevos sin copia de seguridad.</span><button class="btn sm primary" data-act="backup">Guardar copia</button></div>`:'';
+  const banner=backupPending()?`<div class="banner"><span class="grow">Registros sin copia de seguridad.</span><button class="btn sm primary" data-act="backup">Guardar copia</button></div>`:'';
   const nowPanel=r?`<div class="card now-panel">
       <div class="now-head">${iconOrDot(catById(r.cat),true)}<span class="now-cat">${esc(catById(r.cat).name)}</span><span class="now-elapsed num" id="elapsed">${fmtClock(Math.max(0,Date.now()-r.start))}</span></div>
       <div class="adjust">
@@ -612,7 +590,7 @@ function viewHoy(){
           <span class="val num">${fmtTime(r.start)}</span>
           ${adjButtons('adj',true)}
         </div>
-        <div class="hint"><span>Si olvidaste iniciarlo a tiempo, corrige aquí el inicio.</span>${(()=>{const p=prevEntry(r);return p&&r.start-endOf(p)>MIN?`<button class="linkbtn" data-act="join-prev">Empalmar con la anterior (${fmtTime(endOf(p))})</button>`:'';})()}</div>
+        <div class="hint"><span>Corrige el inicio si lo pulsaste tarde.</span>${(()=>{const p=prevEntry(r);return p&&r.start-endOf(p)>MIN?`<button class="linkbtn" data-act="join-prev">Empalmar con la anterior (${fmtTime(endOf(p))})</button>`:'';})()}</div>
       </div>
       <button class="btn stop" data-act="stop">Detener</button>
     </div>`
@@ -627,12 +605,11 @@ function viewHoy(){
    </div>`;
   return `<div class="topbar"><h1>${fmtDayLong(ds)}</h1><span class="row" style="gap:8px;align-items:baseline"><span class="sub num">${total?fmtDur(total)+' registradas':''}</span>${restBtn(ds)}</span></div>
     ${banner}
-    <div>${dayBarHTML(ds)}</div>
+    <div>${dayBarHTML(ds)}${dayTotalsHTML(ds)}</div>
     ${nowPanel}
     <div class="section-head"><h2>Categorías</h2><button class="linkbtn" data-act="edit-cats">Editar</button></div>
     <div class="catgrid">${activeCats().map(c=>`<button class="chip ${r&&r.cat===c.id?'on':''}" data-start="${c.id}">${iconOrDot(c)}<span class="name">${esc(c.name)}</span>${tot.get(c.id)?`<span class="tot num">${fmtDur(tot.get(c.id))}</span>`:''}</button>`).join('')}
       <button class="chip add" data-act="new-cat">+ Categoría</button></div>
-    ${totalsHoyHTML(tot,total)}
     <div class="section-head"><h2>Registros de hoy</h2><button class="linkbtn" data-act="manual">+ Añadir a mano</button></div>
     ${entriesListHTML(ds,!isRest(ds))}`;
 }
@@ -661,8 +638,7 @@ function viewRegistros(){
     </section>
     <section class="card">
       <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><span class="row" style="gap:8px;align-items:center;justify-content:center;flex:1"><h2 style="font-size:14px;font-weight:800">${fmtDayLong(state.selDay)}</h2>${restBtn(state.selDay)}</span><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
-      <div style="margin:10px 0 12px">${dayBarHTML(state.selDay)}</div>
-      ${dayTotalsHTML(state.selDay)}
+      <div style="margin:10px 0 12px">${dayBarHTML(state.selDay)}${dayTotalsHTML(state.selDay)}</div>
       ${entriesListHTML(state.selDay,!isRest(state.selDay))}
       <div class="row end" style="margin-top:10px"><button class="linkbtn" data-act="manual-day">+ Añadir registro este día</button></div>
     </section>
@@ -687,26 +663,26 @@ function viewAjustes(){
     <section class="card"><div class="label" style="margin-bottom:6px">Copia de seguridad</div>
       <div class="label" style="margin-bottom:6px;color:var(--ink-3)">Copia diaria</div>
       <div class="seg-control">${[['auto','Automática'],['ask','Avisar'],['off','No']].map(([k,l])=>`<button data-bmode="${k}" aria-pressed="${s.backupMode===k}">${l}</button>`).join('')}</div>
-      <p class="desc" style="margin:8px 0 4px;font-size:12px;color:var(--ink-3)">${{auto:'Al abrir la app, si hay registros nuevos, se guarda sola una copia completa en Descargas (una al día).',ask:'Al abrir la app, si hay registros nuevos, aparece un aviso con un botón para guardar la copia.',off:'No se avisa. Puedes guardar una copia a mano cuando quieras.'}[s.backupMode]}</p>
+      <p class="desc" style="margin:8px 0 4px;font-size:12px;color:var(--ink-3)">${{auto:'Al abrir la app, si hay cambios, se descarga sola una copia (una al día).',ask:'Al abrir la app, si hay cambios, aparece un botón para guardar la copia.',off:'Sin avisos. Guarda copias a mano.'}[s.backupMode]}</p>
       <div class="list">
-        <button data-act="backup"><span class="grow">Guardar copia ahora<br><span class="desc">${data.meta.lastBackup?'Última copia: '+new Date(data.meta.lastBackup).toLocaleString('es-ES'):'Nunca se ha hecho copia'}. Cada copia contiene todo el histórico.</span></span><span class="chev">›</span></button>
-        <button data-act="share"><span class="grow">Compartir copia<br><span class="desc">Envía la copia completa a Drive, correo, Telegram… para tenerla fuera del móvil.</span></span><span class="chev">›</span></button>
+        <button data-act="backup"><span class="grow">Guardar copia ahora<br><span class="desc">${data.meta.lastBackup?'Última copia: '+new Date(data.meta.lastBackup).toLocaleString('es-ES'):'Nunca'}. Incluye todo el histórico.</span></span><span class="chev">›</span></button>
+        <button data-act="share"><span class="grow">Compartir copia<br><span class="desc">A Drive, correo, Telegram… para tenerla fuera del móvil.</span></span><span class="chev">›</span></button>
         <button data-act="export-csv"><span class="grow">Exportar CSV<br><span class="desc">Para hojas de cálculo: fecha, inicio, fin, categoría, minutos.</span></span><span class="chev">›</span></button>
-        <button data-act="import"><span class="grow">Restaurar desde una copia<br><span class="desc">Importa un JSON guardado antes. Puedes añadir o reemplazar.</span></span><span class="chev">›</span></button>
+        <button data-act="import"><span class="grow">Restaurar desde una copia<br><span class="desc">Añade lo que falte o reemplaza todo.</span></span><span class="chev">›</span></button>
         <input type="file" id="importFile" accept=".json,application/json" hidden>
       </div></section>
     <section class="card"><div class="label" style="margin-bottom:6px">Precisión de los tiempos</div>
       <div class="seg-control">${[[1,'1 minuto'],[5,'5 minutos'],[15,'15 minutos']].map(([k,l])=>`<button data-gran="${k}" aria-pressed="${STEP()===k}">${l}</button>`).join('')}</div>
-      <p class="desc" style="margin:8px 0 0;font-size:12px;color:var(--ink-3)">Las horas de inicio y fin se redondean a este paso, y los botones de ajuste se adaptan.</p></section>
+      <p class="desc" style="margin:8px 0 0;font-size:12px;color:var(--ink-3)">Redondeo de las horas y paso de los botones ±.</p></section>
     <section class="card"><div class="label" style="margin-bottom:6px">Aspecto</div>
       <div class="seg-control">${[['system','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,l])=>`<button data-theme="${k}" aria-pressed="${s.theme===k}">${l}</button>`).join('')}</div></section>
     <section class="card"><div class="label" style="margin-bottom:6px">Datos</div>
       <p class="mono-small" style="margin:0">${data.entries.length} registros · ${data.categories.length} categorías · esquema v${data.schema}<br>guardado en este navegador${loadError?'<br><span style="color:var(--danger)">Aviso: los datos principales no se pudieron leer, se usó la copia interna más reciente.</span>':''}</p>
-      ${(()=>{const t=trash();return t?`<div class="list" style="margin-top:6px"><button data-act="wipe-undo"><span class="grow">Deshacer el borrado de registros<br><span class="desc">${t.entries.length} registros borrados el ${new Date(t.date).toLocaleString('es-ES')}. Se conservan hasta ${TRASH_DAYS} días.</span></span><span class="chev">›</span></button></div>`:''})()}
+      ${(()=>{const t=trash();return t?`<div class="list" style="margin-top:6px"><button data-act="wipe-undo"><span class="grow">Deshacer el borrado<br><span class="desc">${t.entries.length} registros, borrados el ${new Date(t.date).toLocaleDateString('es-ES')}. Se conservan ${TRASH_DAYS} días.</span></span><span class="chev">›</span></button></div>`:''})()}
       <details class="danger-zone"><summary>Zona peligrosa</summary><div class="dz">
-        <span>Borrar todos los registros: antes se descarga una copia y lo borrado queda ${TRASH_DAYS} días en una papelera interna. Las categorías y ajustes se conservan.</span>
+        <span>Antes se descarga una copia y lo borrado queda ${TRASH_DAYS} días en la papelera. Categorías y ajustes se conservan.</span>
         <button class="linkbtn danger" data-act="wipe" style="align-self:flex-start">Borrar todos los registros…</button>
-        ${trash()?`<span>Borrado definitivo: elimina de este navegador los datos, las categorías, los ajustes, las copias internas y la papelera. No se puede deshacer.</span><button class="linkbtn danger" data-act="nuke" style="align-self:flex-start">Borrar todo definitivamente…</button>`:'<span style="color:var(--ink-3)">El borrado definitivo solo está disponible después de haber borrado los registros y mientras la papelera tenga contenido.</span>'}
+        ${trash()?`<span>Borrado definitivo: elimina todo lo de la app en este navegador, papelera incluida. Sin vuelta atrás.</span><button class="linkbtn danger" data-act="nuke" style="align-self:flex-start">Borrar todo definitivamente…</button>`:'<span style="color:var(--ink-3)">El borrado definitivo solo aparece mientras la papelera tiene contenido.</span>'}
       </div></details></section>`;
 }
 
@@ -732,7 +708,7 @@ function openInsertEditor(t){
 }
 /* Inserción en una unión: los dos vecinos se ajustan al nuevo registro (se acortan o se alargan)
    para que ningún minuto quede sin dueño, siempre que entre medias no haya otro registro.
-   Se aplica ANTES de resolveOverlaps, que se ocupa del resto. Con apply=false solo describe. */
+   Se aplica ANTES de resolveOverlaps, que se ocupa del resto. Devuelve los vecinos tocados. */
 function jointFill(ed,target,apply){
   const j=ed.joint; if(!j) return [];
   const ts=target.start, en=target.end==null?Date.now():target.end, out=[];
@@ -746,14 +722,8 @@ function jointFill(ed,target,apply){
   // vecinos que se ajustarán aquí (y por tanto no cuentan como "otro registro" entre medias)
   const prevAdj=!!(prev&&prev.end!=null&&prev.start<ts), nextAdj=!!(next&&next!==prev&&endOf(next)>en);
   const between=(a,b)=>data.entries.some(x=>{ if((x===prev&&prevAdj)||(x===next&&nextAdj)) return false; const c=clipped(x); return c&&c[0]<b&&c[1]>a; });
-  if(prevAdj&&prev.end!==ts){
-    if(prev.end>ts){ out.push(catById(prev.cat).name+' acaba a las '+fmtTime(ts)); if(apply) prev.end=ts; }
-    else if(!between(prev.end,ts)){ out.push(catById(prev.cat).name+' se alarga hasta las '+fmtTime(ts)); if(apply) prev.end=ts; }
-  }
-  if(nextAdj&&next.start!==en){
-    if(next.start<en){ out.push(catById(next.cat).name+' empieza a las '+fmtTime(en)); if(apply) next.start=en; }
-    else if(!between(en,next.start)){ out.push(catById(next.cat).name+' empieza a las '+fmtTime(en)); if(apply) next.start=en; }
-  }
+  if(prevAdj&&prev.end!==ts&&(prev.end>ts||!between(prev.end,ts))){ out.push(prev); if(apply) prev.end=ts; }
+  if(nextAdj&&next.start!==en&&(next.start<en||!between(en,next.start))){ out.push(next); if(apply) next.start=en; }
   return out;
 }
 function saveEditing(){
@@ -763,9 +733,8 @@ function saveEditing(){
   let target;
   if(ed.isNew){ if(ed.end==null) ed.end=roundTo(Date.now()); if(ed.end-ed.start<MIN){toast('Duración mínima: 1 minuto');return false;} target={id:uid(),cat:ed.cat,start:ed.start,end:ed.end}; data.entries.push(target); }
   else { target=data.entries.find(x=>x.id===ed.id); if(target){target.cat=ed.cat;target.start=ed.start;target.end=ed.end;} }
-  let m='';
-  if(target){ const f=jointFill(ed,target,true); m=resolveOverlaps(target); if(f.length) m=f.join(', ')+(m?'. '+m:''); }
-  sortEntries(); save(); closeSheet(); render(); if(m) toast(m); return true;
+  if(target){ jointFill(ed,target,true); resolveOverlaps(target); }
+  sortEntries(); save(); closeSheet(); render(); toast('Guardado'); return true;
 }
 function newManualEntry(ds){
   const now=Date.now();
@@ -801,7 +770,7 @@ function renderSheet(){
       <div class="field"><div class="row spread"><div class="label">Inicio</div>${p&&Math.abs(ed.start-endOf(p))>MIN?`<button class="linkbtn" data-snap="start" data-ms="${endOf(p)}">= fin de la anterior (${fmtTime(endOf(p))})</button>`:''}</div>${timeRow('start',ed.start)}</div>
       <div class="field"><div class="row spread"><div class="label">Fin${ed.end==null?' · en curso':''}</div>${ed.end!=null&&nx&&Math.abs(nx.start-ed.end)>MIN?`<button class="linkbtn" data-snap="end" data-ms="${nx.start}">= inicio de la siguiente (${fmtTime(nx.start)})</button>`:''}${ed.end==null?`<button class="linkbtn" data-act="edit-stop">Detener ahora</button>`:''}</div>
         ${ed.end==null?`<div class="durline num">Sigue en marcha desde hace ${fmtDur(Date.now()-ed.start)}.</div>`:timeRow('end',ed.end)}</div>
-      <div class="durline num">${dur<0?'<span style="color:var(--danger)">El fin es anterior al inicio.</span>':dur<MIN?'Sin duración todavía: usa −X en el inicio o +X en el fin.':'Duración: '+fmtDur(dur,true)}</div>
+      <div class="durline num">${dur<0?'<span style="color:var(--danger)">El fin es anterior al inicio.</span>':dur<MIN?'Usa −X en el inicio o +X en el fin.':'Duración: '+fmtDur(dur,true)}</div>
       ${(()=>{const pv=overlapPreview(ed);return pv?`<div class="durline" style="color:var(--ink-2)">Al guardar: ${pv}</div>`:'';})()}
       <div class="row spread">
         ${ed.isNew?'<span></span>':`<button class="btn sm danger" data-act="edit-delete">Eliminar</button>`}
@@ -825,14 +794,14 @@ function renderSheet(){
     const cd=state.catDel, c=catById(cd.id);
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Eliminar categoría">
       <div class="handle"></div><h2>Eliminar «${esc(c.name)}»</h2>
-      <p style="margin:0;color:var(--ink-2);font-size:14px">Tiene ${cd.n} registros. Los registros nunca se borran: elige a qué categoría pasarlos. Si solo quieres que deje de aparecer, usa Archivar.</p>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">Tiene ${cd.n} registros: elige a qué categoría pasarlos. Si solo quieres ocultarla, usa Archivar.</p>
       <div class="catpick">${data.categories.filter(x=>x.id!==cd.id).map(x=>`<button data-deltarget="${x.id}" class="${x.id===cd.target?'on':''}"><i class="dot" style="background:${x.color}"></i>${esc(x.name)}</button>`).join('')}</div>
       <div class="row end"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm danger" data-act="catdel-go">Mover y eliminar</button></div></div></div>`;
   } else if(state.sheet==='resume'){
     const rs=state.resume, last=data.entries.find(e=>e.id===rs.id), c=catById(rs.cat);
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Continuar">
       <div class="handle"></div><h2>${esc(c.name)} terminó a las <span class="num">${fmtTime(last.end)}</span></h2>
-      <p style="margin:0;color:var(--ink-2);font-size:14px">Han pasado ${fmtDur(Date.now()-last.end,true)}. ¿Continuar ese registro o empezar uno nuevo dejando el hueco?</p>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">Han pasado ${fmtDur(Date.now()-last.end,true)}.</p>
       <button class="btn primary" data-act="resume-continue">Continuar desde las ${fmtTime(last.end)}</button>
       <button class="btn" data-act="resume-gap">Dejar hueco y empezar a las ${fmtTime(rs.now)}</button>
       <button class="btn ghost" data-close>Cancelar</button></div></div>`;
@@ -840,22 +809,21 @@ function renderSheet(){
     const n=data.entries.length;
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Borrar registros">
       <div class="handle"></div><h2>Borrar todos los registros</h2>
-      <p style="margin:0;color:var(--ink-2);font-size:14px">Se van a borrar <strong>${n}</strong> registros y los días de descanso. Antes se descargará una copia completa; sin ella no se borra nada. Lo borrado queda ${TRASH_DAYS} días en la papelera interna.</p>
-      <div class="field"><div class="label">Escribe el número de registros (${n}) para confirmar</div><input class="confirm-input num" id="confirmInput" inputmode="numeric" autocomplete="off" placeholder="${n}"></div>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">Se borran <strong>${n}</strong> registros y los días de descanso. Primero se descarga una copia; sin ella no se borra nada. Podrás deshacerlo durante ${TRASH_DAYS} días.</p>
+      <div class="field"><div class="label">Escribe ${n} para confirmar</div><input class="confirm-input num" id="confirmInput" inputmode="numeric" autocomplete="off" placeholder="${n}"></div>
       <div class="row end"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm danger" data-act="wipe-go" ${n?'':'disabled style="opacity:.5"'}>Guardar copia y borrar</button></div></div></div>`;
     setTimeout(()=>{const i=$('#confirmInput');if(i)i.focus();},50);
   } else if(state.sheet==='nuke'){
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Borrado definitivo">
       <div class="handle"></div><h2 style="color:var(--danger)">Borrado definitivo</h2>
-      <p style="margin:0;color:var(--ink-2);font-size:14px">Se eliminará de este navegador todo lo que la app ha guardado: registros, categorías, ajustes, las ${SNAP_DAYS} copias internas y la papelera. La app quedará como recién instalada. <strong>No se puede deshacer.</strong></p>
-      <p style="margin:0;color:var(--ink-2);font-size:14px">Los archivos JSON descargados o compartidos no se tocan: si quieres eliminarlos, bórralos a mano en Descargas.</p>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">Se elimina todo lo guardado en este navegador: registros, categorías, ajustes, copias internas y papelera. <strong>No se puede deshacer.</strong> Los JSON de Descargas no se tocan.</p>
       <div class="field"><div class="label">Escribe BORRAR para confirmar</div><input class="confirm-input" id="confirmInput" autocomplete="off" autocapitalize="characters" placeholder="BORRAR"></div>
       <div class="row end"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm danger" data-act="nuke-go">Borrar todo</button></div></div></div>`;
     setTimeout(()=>{const i=$('#confirmInput');if(i)i.focus();},50);
   } else if(state.sheet==='import'){
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Restaurar copia">
       <div class="handle"></div><h2>Restaurar copia</h2>
-      <p style="margin:0;color:var(--ink-2);font-size:14px">El archivo contiene ${state.importData.entries.length} registros y ${state.importData.categories.length} categorías. ¿Cómo quieres aplicarlo?</p>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">${state.importData.entries.length} registros y ${state.importData.categories.length} categorías.</p>
       <button class="btn" data-act="import-merge">Añadir los que falten (recomendado)</button>
       <button class="btn danger" data-act="import-replace">Reemplazar todo lo actual</button>
       <button class="btn ghost" data-close>Cancelar</button></div></div>`;
@@ -910,14 +878,14 @@ document.addEventListener('click',ev=>{
     case 'wipe': state.sheet='wipe'; renderSheet(); break;
     case 'wipe-go': {
       const n=data.entries.length, v=($('#confirmInput')||{}).value||'';
-      if(v.trim()!==String(n)){toast('Escribe exactamente '+n+' para confirmar');return;}
-      doBackup().then(ok=>{ if(!ok){toast('Sin copia guardada no se borra nada');return;} if(wipeEntries()){closeSheet();render();toast('Registros borrados. Puedes deshacerlo durante '+TRASH_DAYS+' días.');} });
+      if(v.trim()!==String(n)){toast('Escribe '+n+' para confirmar');return;}
+      doBackup().then(ok=>{ if(!ok){toast('Sin copia no se borra');return;} if(wipeEntries()){closeSheet();render();toast('Registros borrados');} });
       break; }
     case 'wipe-undo': undoWipe(); break;
     case 'nuke': state.sheet='nuke'; renderSheet(); break;
     case 'nuke-go': {
       const v=($('#confirmInput')||{}).value||'';
-      if(v.trim()!=='BORRAR'){toast('Escribe BORRAR en mayúsculas para confirmar');return;}
+      if(v.trim()!=='BORRAR'){toast('Escribe BORRAR para confirmar');return;}
       nukeEverything(); break; }
     case 'edit-merge-prev': {
       const e=data.entries.find(x=>x.id===state.editing.id), p=e&&prevEntry(e); if(!p) return;
@@ -979,8 +947,8 @@ setInterval(()=>{const el=$('#elapsed'),r=running();if(el&&r)el.textContent=fmtC
 setInterval(()=>{if(state.view==='hoy'&&!state.sheet)render();},60000);
 render();
 autoBackupIfDue();
-// Service worker solo cuando la app se sirve desde su propio sitio (GitHub Pages), no dentro de claude.ai ni desde un archivo local.
-if('serviceWorker' in navigator&&location.protocol==='https:'&&!window.claude){
+// Service worker solo cuando la app se sirve desde su propio sitio (GitHub Pages), no desde un archivo local.
+if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 </script>
