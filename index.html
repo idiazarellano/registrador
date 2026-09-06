@@ -464,6 +464,18 @@ function entriesListHTML(ds,withGaps){
 }
 function todayTotals(ds){const m=new Map();for(const s of segmentsOfDay(ds)) m.set(s.e.cat,(m.get(s.e.cat)||0)+s.ms);return m;}
 
+function totalsHoyHTML(tot,total){
+  const rows=[...tot.entries()].map(([id,ms])=>({c:catById(id),ms})).sort((a,b)=>b.ms-a.ms);
+  if(!rows.length) return '';
+  const max=rows[0].ms;
+  return `<section class="card">
+      <div class="section-head"><h2>Totales de hoy</h2><span class="sub num" style="font-size:12px;color:var(--ink-2)">${fmtDur(total)} en total</span></div>
+      <div class="totals" style="margin-top:12px">${rows.map(r=>`<div class="trow">
+        <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
+        <span class="v num">${fmtDur(r.ms)} · ${Math.round(r.ms/total*100)} %</span>
+        <span class="bar"><i style="width:${r.ms/max*100}%;background:${r.c.color}"></i></span></div>`).join('')}</div>
+    </section>`;
+}
 function viewHoy(){
   const ds=dayStart(Date.now()), r=running(), tot=todayTotals(ds);
   let total=0; tot.forEach(v=>total+=v);
@@ -497,6 +509,7 @@ function viewHoy(){
     <div class="section-head"><h2>Categorías</h2><button class="linkbtn" data-act="edit-cats">Editar</button></div>
     <div class="catgrid">${activeCats().map(c=>`<button class="chip ${r&&r.cat===c.id?'on':''}" data-start="${c.id}">${iconOrDot(c)}<span class="name">${esc(c.name)}</span>${tot.get(c.id)?`<span class="tot num">${fmtDur(tot.get(c.id))}</span>`:''}</button>`).join('')}
       <button class="chip add" data-act="new-cat">+ Categoría</button></div>
+    ${totalsHoyHTML(tot,total)}
     <div class="section-head"><h2>Registros de hoy</h2><button class="linkbtn" data-act="manual">+ Añadir a mano</button></div>
     ${entriesListHTML(ds,true)}`;
 }

@@ -3,8 +3,8 @@
    la copia guardada. Así las actualizaciones llegan al instante cuando hay red
    y la app sigue abriéndose sin ella. Nunca toca los datos del usuario, que
    viven en localStorage. */
-const CACHE = 'registrador-v1';
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const CACHE = 'registrador-v2';
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png?v=2', './icon-512.png?v=2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
