@@ -129,6 +129,17 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .entry .dur{font-size:13px;color:var(--ink-2)}
 .entry.gap{grid-template-columns:4px 92px 1fr auto;background:transparent;color:var(--ink-3);padding:4px 12px;font-size:12px}
 .entry.gap .cat{font-weight:500;color:var(--ink-3);font-style:italic}
+.joint{position:relative;height:0;z-index:2}
+.joint .plus{position:absolute;right:-6px;top:-13px;width:26px;height:26px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-3);font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.joint .plus:active{background:var(--accent-soft);color:var(--accent)}
+.danger-zone{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.danger-zone summary{cursor:pointer;font-size:12px;color:var(--ink-3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;list-style:none}
+.danger-zone summary::-webkit-details-marker{display:none}
+.danger-zone summary::before{content:'▸ ';}
+.danger-zone[open] summary::before{content:'▾ ';}
+.danger-zone .linkbtn.danger{color:var(--danger)}
+.danger-zone .dz{display:flex;flex-direction:column;gap:10px;margin-top:10px;font-size:13px;color:var(--ink-2)}
+.confirm-input{width:100%;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);padding:0 14px;font-size:16px;font-weight:700;color:var(--ink);text-align:center;letter-spacing:.06em}
 .section-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .section-head h2{font-size:14px;font-weight:800}
 .empty{color:var(--ink-2);font-size:14px;padding:10px 0}
@@ -215,8 +226,12 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
    migrate() convierte versiones antiguas, así una actualización de la app
    nunca requiere borrar datos. */
 const KEY='registrador.v1';
-const KEY_PREV='registrador.v1.prev';   // copia del día anterior por si una actualización fallara
-const SCHEMA=1;
+const KEY_PREV='registrador.v1.prev';   // (antiguo) copia del día anterior; se conserva como último recurso
+const KEY_SNAP='registrador.v1.snap.';  // copias internas diarias: KEY_SNAP+'AAAA-MM-DD'
+const SNAP_DAYS=7;
+const KEY_TRASH='registrador.v1.trash'; // papelera tras 'Borrar todos los registros' (30 días)
+const TRASH_DAYS=30;
+const SCHEMA=2;
 const MIN=60000, HOUR=3600000, DAY=86400000;
 // 4 filas × 8 tonos (rojo→rosa): vivos, oscuros, suaves, neutros/tierra
 const PALETTE=[
@@ -254,7 +269,7 @@ function defaultData(){
       {id:'c8',name:'Sueño',color:'#6b7280',icon:'😴'}],
     entries:[],
     restDays:[],
-    settings:{autoBackup:true,theme:'system',granularity:5},
+    settings:{backupMode:'auto',theme:'system',granularity:5},
     meta:{created:Date.now(),updated:Date.now(),lastBackup:0,lastBackupUpdated:0}};
 }
 function migrate(d){
@@ -263,10 +278,14 @@ function migrate(d){
   d.categories=Array.isArray(d.categories)?d.categories:[];
   d.entries=Array.isArray(d.entries)?d.entries:[];
   d.restDays=Array.isArray(d.restDays)?d.restDays:[];
-  d.settings=Object.assign({autoBackup:true,theme:'system',granularity:5},d.settings||{});
+  d.settings=Object.assign({backupMode:'auto',theme:'system',granularity:5},d.settings||{});
   for(const c of d.categories){ if(c.icon==null) c.icon=''; if(c.archived==null) c.archived=false; }
   d.meta=Object.assign({created:Date.now(),updated:0,lastBackup:0,lastBackupUpdated:0},d.meta||{});
-  // futuras versiones: if(d.schema<2){ ... d.schema=2; }
+  if(d.schema<2){ // v2: autoBackup (sí/no) pasa a backupMode (auto/ask/off)
+    if('autoBackup' in d.settings){ d.settings.backupMode=d.settings.autoBackup===false?'off':'auto'; delete d.settings.autoBackup; }
+    d.schema=2; }
+  if(!['auto','ask','off'].includes(d.settings.backupMode)) d.settings.backupMode='auto';
+  // futuras versiones: if(d.schema<3){ ... d.schema=3; }
   d.schema=SCHEMA;
   return d;
 }
@@ -278,6 +297,7 @@ function load(){
     return migrate(JSON.parse(raw));
   }catch(e){
     loadError=e;
+    for(const k of snapshotKeys()){ try{return migrate(JSON.parse(localStorage.getItem(k)));}catch(_){} }
     try{const prev=localStorage.getItem(KEY_PREV); if(prev) return migrate(JSON.parse(prev));}catch(_){}
     return defaultData();
   }
@@ -287,14 +307,23 @@ function save(){
   try{localStorage.setItem(KEY,JSON.stringify(data));}
   catch(e){toast('No se pudo guardar: '+e.message);}
 }
-function snapshotPrev(){
-  // Una vez al día guardamos una copia intacta de los datos antes de tocarlos.
+function snapshotKeys(){ // más reciente primero
+  const ks=[]; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith(KEY_SNAP)) ks.push(k);}
+  return ks.sort().reverse();
+}
+function snapshotDaily(){
+  // Una vez al día guardamos una copia intacta de los datos antes de tocarlos; se conservan las últimas SNAP_DAYS.
   try{
-    const stamp=localStorage.getItem(KEY_PREV+'.date'), today=dayKey(Date.now());
-    if(stamp!==today){const raw=localStorage.getItem(KEY); if(raw){localStorage.setItem(KEY_PREV,raw);localStorage.setItem(KEY_PREV+'.date',today);}}
+    const k=KEY_SNAP+dayKey(Date.now());
+    if(!localStorage.getItem(k)){const raw=localStorage.getItem(KEY); if(raw) localStorage.setItem(k,raw);}
+    snapshotKeys().slice(SNAP_DAYS).forEach(x=>localStorage.removeItem(x));
   }catch(_){}
 }
-data=load(); snapshotPrev();
+function trash(){
+  try{const t=JSON.parse(localStorage.getItem(KEY_TRASH)||'null'); if(!t) return null;
+    if(Date.now()-t.date>TRASH_DAYS*DAY){localStorage.removeItem(KEY_TRASH);return null;} return t;}catch(_){return null;}
+}
+data=load();
 
 /* ============ Utilidades de tiempo ============ */
 const pad=n=>String(n).padStart(2,'0');
@@ -313,6 +342,8 @@ function dayKey(ms){const d=new Date(ms);return d.getFullYear()+'-'+pad(d.getMon
 const DOW=['dom','lun','mar','mié','jue','vie','sáb'], MON=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 function fmtDayLong(ms){const d=new Date(ms);const s=`${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}`;return s[0].toUpperCase()+s.slice(1);}
 function roundMin(ms){return Math.floor(ms/MIN)*MIN;}
+snapshotDaily(); // aquí y no antes: usa dayKey/pad, definidos en este bloque
+if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
 
 /* ============ Modelo ============ */
 const catById=id=>data.categories.find(c=>c.id===id)||{id,name:'(sin categoría)',color:'#9a9a9a',icon:''};
@@ -374,6 +405,20 @@ function resolveOverlaps(e){
   return msg.length?'Registro anterior '+msg.join(', '):'';
 }
 function deleteEntry(id){data.entries=data.entries.filter(e=>e.id!==id);save();}
+/* Texto con lo que resolveOverlaps haría al guardar `ed` (sin tocar nada). */
+function overlapPreview(ed){
+  const en=ed.end==null?Date.now():ed.end; if(en<=ed.start) return '';
+  const out=[];
+  for(const x of data.entries){
+    if(x.id===ed.id) continue;
+    const xe=endOf(x), a=Math.max(x.start,ed.start), b=Math.min(xe,en);
+    if(b-a<MIN) continue;
+    const name=catById(x.cat).name;
+    if(x.start>=ed.start&&xe<=en) out.push('se elimina '+name+' ('+fmtTime(x.start)+'–'+fmtTime(xe)+')');
+    else out.push(name+' −'+fmtDur(b-a));
+  }
+  return out.join(', ');
+}
 
 /* ============ Copias de seguridad y exportación ============ */
 let dl=null; // capacidad de descarga cuando la página se ve dentro de claude.ai
@@ -399,12 +444,42 @@ function exportCSV(){
   }
   return lines.join('\n');
 }
-async function doBackup(){
-  const ok=await saveFile('registrador-'+dayKey(Date.now())+'.json',exportJSON());
-  if(ok){data.meta.lastBackup=Date.now();data.meta.lastBackupUpdated=data.meta.updated;save();toast('Copia guardada');render();}
+function backupName(ext){const d=new Date();return 'registrador-'+dayKey(d)+'-'+pad(d.getHours())+pad(d.getMinutes())+ext;}
+function markBackup(){data.meta.lastBackup=Date.now();data.meta.lastBackupUpdated=data.meta.updated;save();}
+async function doBackup(auto){
+  const ok=await saveFile(backupName('.json'),exportJSON());
+  if(ok){markBackup();toast(auto?'Copia diaria guardada en Descargas':'Copia guardada');render();}
+  return ok;
+}
+async function shareBackup(){
+  let file; try{file=new File([exportJSON()],backupName('.json'),{type:'application/json'});}catch(_){}
+  if(!file||!navigator.canShare||!navigator.canShare({files:[file]})){toast('Este navegador no permite compartir archivos');return;}
+  try{await navigator.share({files:[file],title:'Copia de Registrador'}); markBackup(); toast('Copia compartida'); render();}
+  catch(e){ if(e&&e.name!=='AbortError') toast('No se pudo compartir: '+(e.message||e)); }
 }
 function backupPending(){
-  return data.settings.autoBackup && data.entries.length>0 && data.meta.updated>data.meta.lastBackupUpdated && (Date.now()-data.meta.lastBackup>20*HOUR);
+  return data.settings.backupMode!=='off' && data.entries.length>0 && data.meta.updated>data.meta.lastBackupUpdated && (Date.now()-data.meta.lastBackup>20*HOUR);
+}
+function autoBackupIfDue(){ if(data.settings.backupMode==='auto'&&backupPending()&&!state.sheet) doBackup(true); }
+/* Borrado de registros con red de seguridad: copia descargada + papelera interna. */
+function wipeEntries(){
+  try{localStorage.setItem(KEY_TRASH,JSON.stringify({date:Date.now(),entries:data.entries,restDays:data.restDays}));}
+  catch(e){toast('No se pudo guardar la papelera: '+e.message);return false;}
+  data.entries=[]; data.restDays=[]; save(); return true;
+}
+function undoWipe(){
+  const t=trash(); if(!t){toast('La papelera está vacía');return;}
+  const ids=new Set(data.entries.map(e=>e.id)); let n=0;
+  for(const e of t.entries) if(!ids.has(e.id)){data.entries.push(e);n++;}
+  for(const k of t.restDays||[]) if(!data.restDays.includes(k)) data.restDays.push(k);
+  sortEntries(); save(); localStorage.removeItem(KEY_TRASH); render(); toast('Recuperados '+n+' registros');
+}
+function nukeEverything(){
+  // Elimina todo lo que la app ha escrito en este navegador: datos, copias internas, papelera y ajustes.
+  const ks=[]; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('registrador.')) ks.push(k);}
+  ks.forEach(k=>localStorage.removeItem(k));
+  try{sessionStorage.clear();}catch(_){}
+  location.reload();
 }
 function importJSON(text,mode){
   let d; try{d=migrate(JSON.parse(text));}catch(e){toast('El archivo no es una copia válida');return;}
@@ -465,6 +540,9 @@ function entriesListHTML(ds,withGaps){
     const older=list[i+1];
     if(withGaps&&older&&e.start-endOf(older)>=5*MIN){
       html+=`<button class="entry gap" data-gap-start="${endOf(older)}" data-gap-end="${e.start}"><span></span><span class="times num">${fmtTime(endOf(older))}–${fmtTime(e.start)}</span><span class="cat">sin registrar · toca para rellenar</span><span class="dur num">${fmtDur(e.start-endOf(older))}</span></button>`;
+    } else if(withGaps&&older){
+      // sin hueco: círculo para insertar un registro en la unión; empieza con duración 0 y el usuario decide a quién le quita tiempo
+      html+=`<div class="joint"><button class="plus" data-insert="${endOf(older)}" aria-label="Insertar registro a las ${fmtTime(endOf(older))}" title="Insertar registro aquí">+</button></div>`;
     }
   });
   return `<div class="entries">${html}</div>`;
@@ -571,9 +649,12 @@ function viewAjustes(){
       <button data-act="new-cat"><span class="dot" style="border:2px dashed var(--line)"></span><span class="grow" style="color:var(--accent);font-weight:700">Nueva categoría</span></button></div>
       ${data.categories.some(c=>c.archived)?`<div class="label" style="margin:14px 0 6px">Archivadas</div><div class="list">${data.categories.filter(c=>c.archived).map(c=>`<div class="catrow"><button data-cat="${c.id}" class="grow" style="opacity:.7">${iconOrDot(c)}<span class="grow">${esc(c.name)}</span></button><button class="linkbtn" data-unarchive="${c.id}">Restaurar</button></div>`).join('')}</div>`:''}</section>
     <section class="card"><div class="label" style="margin-bottom:6px">Copia de seguridad</div>
+      <div class="label" style="margin-bottom:6px;color:var(--ink-3)">Copia diaria</div>
+      <div class="seg-control">${[['auto','Automática'],['ask','Avisar'],['off','No']].map(([k,l])=>`<button data-bmode="${k}" aria-pressed="${s.backupMode===k}">${l}</button>`).join('')}</div>
+      <p class="desc" style="margin:8px 0 4px;font-size:12px;color:var(--ink-3)">${{auto:'Al abrir la app, si hay registros nuevos, se guarda sola una copia completa en Descargas (una al día).',ask:'Al abrir la app, si hay registros nuevos, aparece un aviso con un botón para guardar la copia.',off:'No se avisa. Puedes guardar una copia a mano cuando quieras.'}[s.backupMode]}</p>
       <div class="list">
-        <div><span class="grow">Avisar cada día si hay registros sin copia<br><span class="desc">La copia es un archivo JSON que se guarda en el móvil. Al abrir la app verás un aviso con un botón.</span></span><button class="switch" role="switch" aria-checked="${s.autoBackup}" data-act="toggle-backup" aria-label="Copia automática"></button></div>
-        <button data-act="backup"><span class="grow">Guardar copia ahora<br><span class="desc">${data.meta.lastBackup?'Última copia: '+new Date(data.meta.lastBackup).toLocaleString('es-ES'):'Nunca se ha hecho copia'}</span></span><span class="chev">›</span></button>
+        <button data-act="backup"><span class="grow">Guardar copia ahora<br><span class="desc">${data.meta.lastBackup?'Última copia: '+new Date(data.meta.lastBackup).toLocaleString('es-ES'):'Nunca se ha hecho copia'}. Cada copia contiene todo el histórico.</span></span><span class="chev">›</span></button>
+        <button data-act="share"><span class="grow">Compartir copia<br><span class="desc">Envía la copia completa a Drive, correo, Telegram… para tenerla fuera del móvil.</span></span><span class="chev">›</span></button>
         <button data-act="export-csv"><span class="grow">Exportar CSV<br><span class="desc">Para hojas de cálculo: fecha, inicio, fin, categoría, minutos.</span></span><span class="chev">›</span></button>
         <button data-act="import"><span class="grow">Restaurar desde una copia<br><span class="desc">Importa un JSON guardado antes. Puedes añadir o reemplazar.</span></span><span class="chev">›</span></button>
         <input type="file" id="importFile" accept=".json,application/json" hidden>
@@ -584,8 +665,13 @@ function viewAjustes(){
     <section class="card"><div class="label" style="margin-bottom:6px">Aspecto</div>
       <div class="seg-control">${[['system','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,l])=>`<button data-theme="${k}" aria-pressed="${s.theme===k}">${l}</button>`).join('')}</div></section>
     <section class="card"><div class="label" style="margin-bottom:6px">Datos</div>
-      <p class="mono-small" style="margin:0">${data.entries.length} registros · ${data.categories.length} categorías · esquema v${data.schema}<br>guardado en este navegador${loadError?'<br><span style="color:var(--danger)">Aviso: los datos principales no se pudieron leer, se usó la copia del día anterior.</span>':''}</p>
-      <div class="row" style="margin-top:12px"><button class="btn sm danger" data-act="wipe">Borrar todos los registros</button></div></section>`;
+      <p class="mono-small" style="margin:0">${data.entries.length} registros · ${data.categories.length} categorías · esquema v${data.schema}<br>guardado en este navegador${loadError?'<br><span style="color:var(--danger)">Aviso: los datos principales no se pudieron leer, se usó la copia interna más reciente.</span>':''}</p>
+      ${(()=>{const t=trash();return t?`<div class="list" style="margin-top:6px"><button data-act="wipe-undo"><span class="grow">Deshacer el borrado de registros<br><span class="desc">${t.entries.length} registros borrados el ${new Date(t.date).toLocaleString('es-ES')}. Se conservan hasta ${TRASH_DAYS} días.</span></span><span class="chev">›</span></button></div>`:''})()}
+      <details class="danger-zone"><summary>Zona peligrosa</summary><div class="dz">
+        <span>Borrar todos los registros: antes se descarga una copia y lo borrado queda ${TRASH_DAYS} días en una papelera interna. Las categorías y ajustes se conservan.</span>
+        <button class="linkbtn danger" data-act="wipe" style="align-self:flex-start">Borrar todos los registros…</button>
+        ${trash()?`<span>Borrado definitivo: elimina de este navegador los datos, las categorías, los ajustes, las copias internas y la papelera. No se puede deshacer.</span><button class="linkbtn danger" data-act="nuke" style="align-self:flex-start">Borrar todo definitivamente…</button>`:'<span style="color:var(--ink-3)">El borrado definitivo solo está disponible después de haber borrado los registros y mientras la papelera tenga contenido.</span>'}
+      </div></details></section>`;
 }
 
 function render(){
@@ -634,10 +720,11 @@ function renderSheet(){
       <div class="field"><div class="row spread"><div class="label">Inicio</div>${p&&Math.abs(ed.start-endOf(p))>MIN?`<button class="linkbtn" data-snap="start" data-ms="${endOf(p)}">= fin de la anterior (${fmtTime(endOf(p))})</button>`:''}</div>${timeRow('start',ed.start)}</div>
       <div class="field"><div class="row spread"><div class="label">Fin${ed.end==null?' · en curso':''}</div>${ed.end!=null&&nx&&Math.abs(nx.start-ed.end)>MIN?`<button class="linkbtn" data-snap="end" data-ms="${nx.start}">= inicio de la siguiente (${fmtTime(nx.start)})</button>`:''}${ed.end==null?`<button class="linkbtn" data-act="edit-stop">Detener ahora</button>`:''}</div>
         ${ed.end==null?`<div class="durline num">Sigue en marcha desde hace ${fmtDur(Date.now()-ed.start)}.</div>`:timeRow('end',ed.end)}</div>
-      <div class="durline num">${dur<0?'<span style="color:var(--danger)">El fin es anterior al inicio.</span>':'Duración: '+fmtDur(dur,true)}</div>
+      <div class="durline num">${dur<0?'<span style="color:var(--danger)">El fin es anterior al inicio.</span>':dur<MIN?'Sin duración todavía: usa −X en el inicio o +X en el fin.':'Duración: '+fmtDur(dur,true)}</div>
+      ${(()=>{const pv=overlapPreview(ed);return pv?`<div class="durline" style="color:var(--ink-2)">Al guardar: ${pv}</div>`:'';})()}
       <div class="row spread">
         ${ed.isNew?'<span></span>':`<button class="btn sm danger" data-act="edit-delete">Eliminar</button>`}
-        <span class="row"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm primary" data-act="edit-save" ${dur<0?'disabled style="opacity:.5"':''}>Guardar</button></span>
+        <span class="row"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm primary" data-act="edit-save" ${dur<MIN?'disabled style="opacity:.5"':''}>Guardar</button></span>
       </div></div></div>`;
   } else if(state.sheet==='cat'){
     const c=state.catEdit;
@@ -668,6 +755,22 @@ function renderSheet(){
       <button class="btn primary" data-act="resume-continue">Continuar desde las ${fmtTime(last.end)}</button>
       <button class="btn" data-act="resume-gap">Dejar hueco y empezar a las ${fmtTime(rs.now)}</button>
       <button class="btn ghost" data-close>Cancelar</button></div></div>`;
+  } else if(state.sheet==='wipe'){
+    const n=data.entries.length;
+    o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Borrar registros">
+      <div class="handle"></div><h2>Borrar todos los registros</h2>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">Se van a borrar <strong>${n}</strong> registros y los días de descanso. Antes se descargará una copia completa; sin ella no se borra nada. Lo borrado queda ${TRASH_DAYS} días en la papelera interna.</p>
+      <div class="field"><div class="label">Escribe el número de registros (${n}) para confirmar</div><input class="confirm-input num" id="confirmInput" inputmode="numeric" autocomplete="off" placeholder="${n}"></div>
+      <div class="row end"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm danger" data-act="wipe-go" ${n?'':'disabled style="opacity:.5"'}>Guardar copia y borrar</button></div></div></div>`;
+    setTimeout(()=>{const i=$('#confirmInput');if(i)i.focus();},50);
+  } else if(state.sheet==='nuke'){
+    o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Borrado definitivo">
+      <div class="handle"></div><h2 style="color:var(--danger)">Borrado definitivo</h2>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">Se eliminará de este navegador todo lo que la app ha guardado: registros, categorías, ajustes, las ${SNAP_DAYS} copias internas y la papelera. La app quedará como recién instalada. <strong>No se puede deshacer.</strong></p>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">Los archivos JSON descargados o compartidos no se tocan: si quieres eliminarlos, bórralos a mano en Descargas.</p>
+      <div class="field"><div class="label">Escribe BORRAR para confirmar</div><input class="confirm-input" id="confirmInput" autocomplete="off" autocapitalize="characters" placeholder="BORRAR"></div>
+      <div class="row end"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm danger" data-act="nuke-go">Borrar todo</button></div></div></div>`;
+    setTimeout(()=>{const i=$('#confirmInput');if(i)i.focus();},50);
   } else if(state.sheet==='import'){
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Restaurar copia">
       <div class="handle"></div><h2>Restaurar copia</h2>
@@ -696,6 +799,8 @@ document.addEventListener('click',ev=>{
   if(d.move){const act=activeCats();const i=act.findIndex(c=>c.id===d.move),j=i+(+d.dir);if(j<0||j>=act.length)return;const gi=data.categories.indexOf(act[i]),gj=data.categories.indexOf(act[j]);[data.categories[gi],data.categories[gj]]=[data.categories[gj],data.categories[gi]];save();render();return;}
   if(d.unarchive){catById(d.unarchive).archived=false;save();render();return;}
   if(d.gran){data.settings.granularity=+d.gran;save();render();return;}
+  if(d.bmode){data.settings.backupMode=d.bmode;save();render();return;}
+  if(d.insert){openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start:+d.insert,end:+d.insert});return;}
   if(d.rest){toggleRest(+d.rest);render();toast(isRest(+d.rest)?'Marcado como día de descanso':'Ya no es día de descanso');return;}
   // sheet: editor
   if(d.pick){state.editing.cat=d.pick;renderSheet();return;}
@@ -716,12 +821,23 @@ document.addEventListener('click',ev=>{
     case 'manual-day': newManualEntry(state.selDay); break;
     case 'new-cat': state.catEdit={id:null,name:'',color:PALETTE.find(h=>!data.categories.some(c=>c.color===h))||PALETTE[0],icon:''};state.sheet='cat';renderSheet(); break;
     case 'backup': doBackup(); break;
-    case 'toggle-backup': data.settings.autoBackup=!data.settings.autoBackup;save();render(); break;
-    case 'export-csv': saveFile('registrador-'+dayKey(Date.now())+'.csv',exportCSV()); break;
+    case 'share': shareBackup(); break;
+    case 'export-csv': saveFile(backupName('.csv'),exportCSV()); break;
     case 'import': $('#importFile').click(); break;
     case 'import-merge': importJSON(state.importText,'merge');closeSheet(); break;
     case 'import-replace': if(confirm('Se reemplazarán todos los registros y categorías actuales. ¿Continuar?')){importJSON(state.importText,'replace');closeSheet();} break;
-    case 'wipe': if(confirm('¿Borrar TODOS los registros? Las categorías se conservan. Esta acción no se puede deshacer.')){data.entries=[];save();render();toast('Registros borrados');} break;
+    case 'wipe': state.sheet='wipe'; renderSheet(); break;
+    case 'wipe-go': {
+      const n=data.entries.length, v=($('#confirmInput')||{}).value||'';
+      if(v.trim()!==String(n)){toast('Escribe exactamente '+n+' para confirmar');return;}
+      doBackup().then(ok=>{ if(!ok){toast('Sin copia guardada no se borra nada');return;} if(wipeEntries()){closeSheet();render();toast('Registros borrados. Puedes deshacerlo durante '+TRASH_DAYS+' días.');} });
+      break; }
+    case 'wipe-undo': undoWipe(); break;
+    case 'nuke': state.sheet='nuke'; renderSheet(); break;
+    case 'nuke-go': {
+      const v=($('#confirmInput')||{}).value||'';
+      if(v.trim()!=='BORRAR'){toast('Escribe BORRAR en mayúsculas para confirmar');return;}
+      nukeEverything(); break; }
     case 'edit-merge-prev': {
       const e=data.entries.find(x=>x.id===state.editing.id), p=e&&prevEntry(e); if(!p) return;
       e.start=p.start; deleteEntry(p.id); state.editing.start=e.start; save(); renderSheet(); toast('Registros unidos'); break; }
@@ -781,13 +897,14 @@ document.addEventListener('pointermove',ev=>{ if(lp.timer&&Math.hypot(ev.clientX
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(lp.timer);lp.timer=null;}));
 document.addEventListener('contextmenu',ev=>{ if(ev.target.closest('.chip[data-start]')) ev.preventDefault(); });
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&state.sheet)closeSheet();});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)render();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();autoBackupIfDue();}});
 window.addEventListener('storage',ev=>{if(ev.key===KEY){data=load();render();}});
 
 // reloj: el cronómetro cada segundo, la barra cada minuto
 setInterval(()=>{const el=$('#elapsed'),r=running();if(el&&r)el.textContent=fmtClock(Math.max(0,Date.now()-r.start));},1000);
 setInterval(()=>{if(state.view==='hoy'&&!state.sheet)render();},60000);
 render();
+autoBackupIfDue();
 // Service worker solo cuando la app se sirve desde su propio sitio (GitHub Pages), no dentro de claude.ai ni desde un archivo local.
 if('serviceWorker' in navigator&&location.protocol==='https:'&&!window.claude){
   navigator.serviceWorker.register('sw.js').catch(()=>{});

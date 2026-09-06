@@ -29,31 +29,42 @@ GitHub Pages tarda uno o dos minutos en servir la versión nueva. En el móvil, 
 ## Dónde viven los datos
 
 - Los registros se guardan en el almacenamiento del navegador (`localStorage`), bajo la clave `registrador.v1`.
-- Cada día, antes de tocar nada, la app guarda una copia intacta del día anterior en `registrador.v1.prev`. Si una actualización fallara al leer los datos, arranca con esa copia.
+- Al abrir la app se pide a Chrome almacenamiento persistente, para que no borre los datos si anda corto de espacio.
+- Cada día, antes de tocar nada, la app guarda una copia intacta de los datos en `registrador.v1.snap.AAAA-MM-DD`. Se conservan las 7 últimas. Si una actualización fallara al leer los datos, arranca con la más reciente.
 - Los datos van ligados a la dirección (origen) desde la que abres la app. Mientras el enlace sea el mismo, las actualizaciones no tocan los datos.
 
 ## Actualizar la app sin perder nada
 
 - Los datos llevan un número de esquema (`schema`). La función `migrate()` en `index.html` convierte estructuras antiguas a la actual; cualquier cambio de formato se añade ahí como un paso `if(d.schema<N){...}`.
-- Republicar el artefacto con el mismo enlace sustituye solo el código. El almacenamiento del navegador no se toca.
-- Antes de una actualización grande, pulsa "Guardar copia ahora" en Ajustes. Si algo sale mal, "Restaurar desde una copia" recupera todo.
+- Republicar con el mismo enlace sustituye solo el código. El almacenamiento del navegador no se toca.
+- Antes de una actualización grande, pulsa "Guardar copia ahora" en Ajustes → Copia de seguridad. Si algo sale mal, "Restaurar desde una copia" recupera todo.
 
-## Copia de seguridad
+## Copia de seguridad (Ajustes → Copia de seguridad)
 
-- Ajustes → Copia de seguridad. La copia es un JSON con todo (categorías, registros, ajustes) que se guarda en Descargas del móvil.
-- Con el aviso diario activado, al abrir la app aparece un botón "Guardar copia" si hay registros nuevos desde la última copia.
+- Cada copia es un JSON con **todo el histórico** (categorías, registros, ajustes), no solo el día. Basta con restaurar la más reciente. El nombre lleva fecha y hora (`registrador-2026-09-06-1830.json`), así nunca pregunta si sobrescribir; las antiguas se pueden borrar de Descargas.
+- **Copia diaria**: Automática (al abrir la app, si hay registros nuevos y han pasado 20 h desde la última, se descarga sola), Avisar (aparece un botón en Hoy) o No.
+- "Compartir copia" abre el menú de compartir de Android para enviar el JSON a Drive, correo, Telegram…
 - "Exportar CSV" genera una tabla (fecha, inicio, fin, categoría, minutos, descanso) para hojas de cálculo.
 - **Días de descanso.** El botón 🌴 junto a la fecha (en Hoy o en Registros) marca el día. Las medias de Totales solo cuentan los días que no son de descanso, y en esos días no se avisa de huecos sin registrar.
+
+## Borrar datos (Ajustes → Datos → Zona peligrosa)
+
+- **Borrar todos los registros**: hay que escribir el número de registros; antes se descarga una copia (sin ella no se borra) y lo borrado va a una papelera interna (`registrador.v1.trash`) durante 30 días, con un botón "Deshacer el borrado" en Datos.
+- **Borrar todo definitivamente**: solo aparece mientras la papelera tiene contenido. Escribiendo BORRAR elimina del navegador todas las claves `registrador.*` (datos, categorías, ajustes, copias internas y papelera). Los JSON descargados no se tocan.
+
+## Insertar un registro donde no hay hueco
+
+En la lista de registros, entre dos registros seguidos aparece un círculo "+". Abre el editor con un registro nuevo de duración cero en esa unión; con −X en el inicio o +X en el fin se le da duración, y la línea "Al guardar: …" muestra a qué vecinos se recorta.
 
 ## Formato del JSON
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "categories": [{"id": "c1", "name": "Trabajo", "color": "#2a78d6"}],
   "entries": [{"id": "abc", "cat": "c1", "start": 1757059200000, "end": 1757062800000}],
   "restDays": ["2026-09-06"],
-  "settings": {"autoBackup": true, "theme": "system"},
+  "settings": {"backupMode": "auto", "theme": "system", "granularity": 5},
   "meta": {"created": 0, "updated": 0, "lastBackup": 0, "lastBackupUpdated": 0}
 }
 ```
