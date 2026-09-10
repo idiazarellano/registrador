@@ -797,7 +797,7 @@ function viewTareas(){
           <span class="count num">${np||'✓'}</span><span class="chev">${closed?'▸':'▾'}</span></button>
         ${closed?'':`<div class="tasks">${g.list.map(t=>`<div class="task ${t.done?'done':''}">
           <button class="tcheck" data-tdone="${t.id}" aria-pressed="${!!t.done}" aria-label="Hecha">${t.done?'✓':''}</button>
-          <button class="grow ttext" data-tdone="${t.id}" data-task="${t.id}">${esc(t.text)}</button>
+          <button class="grow ttext" data-task="${t.id}">${esc(t.text)}</button>
           ${t.done?'':`<button class="tplay" data-start="${g.c.id}" aria-label="Empezar a contar ${esc(g.c.name)}">▶</button>`}
         </div>`).join('')}<button class="taskadd" data-act="new-task" data-tcat="${g.c.id}">+ Añadir a ${esc(g.c.name)}</button></div>`}
       </section>`;}).join(''):'<p class="empty">Sin tareas. Sirven de recordatorio: «llamar al fontanero», y ya.</p>'}
@@ -1474,7 +1474,8 @@ document.addEventListener('click',ev=>{
   if(d.baledit){const b=balById(d.baledit);state.catEdit={kind:'balance',id:b.id,name:b.name,color:b.color,icon:b.icon||'',a:b.a.label,b:b.b.label};state.sheet='cat';renderSheet();return;}
   if(d.markedit){const m=markById(d.markedit);state.catEdit={kind:'mark',id:m.id,name:m.name,color:m.color,icon:m.icon||''};state.sheet='cat';renderSheet();return;}
   if(d.tgroup){state.taskClosed=state.taskClosed.includes(d.tgroup)?state.taskClosed.filter(x=>x!==d.tgroup):state.taskClosed.concat(d.tgroup);render();return;}
-  if(d.tdone){ if(lp.fired){lp.fired=false;return;} const t=data.tasks.find(x=>x.id===d.tdone);if(t){t.done=!t.done;t.doneAt=t.done?Date.now():0;save();render();}return;}
+  if(d.tdone){const t=data.tasks.find(x=>x.id===d.tdone);if(t){t.done=!t.done;t.doneAt=t.done?Date.now():0;save();render();}return;}
+  if(d.task){const t=data.tasks.find(x=>x.id===d.task);if(t){state.taskEdit={id:t.id,text:t.text,cat:t.cat};state.sheet='task';renderSheet();}return;}
   if(d.taskcat){state.taskEdit.cat=d.taskcat;document.querySelectorAll('[data-taskcat]').forEach(b=>b.classList.toggle('on',b.dataset.taskcat===d.taskcat));return;}
   if(d.start){ if(lp.fired){lp.fired=false;return;} startCategory(d.start);return;}
   if(d.edit){const e=data.entries.find(x=>x.id===d.edit);if(e)openEditor(e);return;}
@@ -1618,7 +1619,7 @@ document.addEventListener('change',ev=>{
 });
 // Pulsación larga (500 ms) sobre una categoría de la pantalla principal: abre su edición.
 let lp={timer:null,fired:false,x:0,y:0,el:null};
-const LP_SEL='.chip[data-start],.markchip[data-mark],.balbtn[data-bal],.ttext[data-task]';
+const LP_SEL='.chip[data-start],.markchip[data-mark],.balbtn[data-bal]';
 function lpClear(){clearTimeout(lp.timer);lp.timer=null;if(lp.el){lp.el.classList.remove('holding','lp');lp.el=null;}}
 document.addEventListener('pointerdown',ev=>{
   const chip=ev.target.closest(LP_SEL); if(!chip) return;
@@ -1626,11 +1627,6 @@ document.addEventListener('pointerdown',ev=>{
   lp.el=chip; chip.classList.add('lp'); requestAnimationFrame(()=>{if(lp.el===chip)chip.classList.add('holding');});
   lp.timer=setTimeout(()=>{lp.fired=true; if(navigator.vibrate) navigator.vibrate(15);
     lpClear();
-    if(chip.dataset.task){
-      const t=data.tasks.find(x=>x.id===chip.dataset.task);
-      if(t){state.taskEdit={id:t.id,text:t.text,cat:t.cat};state.sheet='task';renderSheet();}
-      return;
-    }
     const kind=chip.dataset.bal?'balance':chip.dataset.mark?'mark':'cat';
     const o=kind==='balance'?balById(chip.dataset.bal):kind==='mark'?markById(chip.dataset.mark):catById(chip.dataset.start);
     state.catEdit={kind,id:o.id,name:o.name,color:o.color,icon:o.icon||''};
