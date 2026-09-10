@@ -75,6 +75,17 @@ En la lista de registros, entre dos registros seguidos aparece un círculo "+". 
 
 Regla de la inserción: los dos vecinos se ajustan al nuevo registro (se acortan o se alargan) para que ningún minuto quede sin dueño. Si el nuevo ocupa 08:45–08:55 en la unión de las 09:00, el anterior acaba a las 08:45 y el siguiente empieza a las 08:55. Solo se alarga un vecino si no hay otro registro entre medias. Las ediciones normales siguen igual: recortan a los vecinos pero nunca los alargan, así que pueden dejar hueco a propósito.
 
+## Datos: los cuatro análisis
+
+Arriba de la pantalla se elige el tipo de análisis; la fila de debajo cambia con él (periodo en los tres primeros, categoría y número de semanas en Progresión).
+
+- **Resumen**: totales por categoría con porcentaje, media por día y comparación con el periodo anterior (▲▼), marcas y día a día.
+- **Día tipo**: 24 columnas, una por hora. Cada una reparte por categoría el tiempo registrado en esa hora a lo largo del periodo; lo que le falta para llegar arriba es tiempo sin registrar. Enseña la rutina: a qué hora empiezas de verdad, cuándo se rompe la tarde.
+- **Semana**: media de cada día de la semana, apilada por categoría. No cuenta los días de descanso.
+- **Progresión**: una barra por semana de una categoría (12, 26 o 52 semanas) y la línea de la media de cuatro semanas, más una frase con las últimas cuatro semanas frente a las cuatro anteriores. La semana en curso no aparece hasta que termina.
+
+Ninguna vista lleva categorías escritas a mano: todas recorren las que existan en cada momento. Y en Progresión no hay metas, ni rachas, ni colores de aprobado o suspenso: la unidad es la semana justamente para que un día malo no rompa nada.
+
 ## Qué días cuentan en las estadísticas
 
 La pantalla **Datos** usa solo días completos: N días terminando **ayer**. El día en curso queda fuera, porque va a medias y falsearía las medias y la comparación con el periodo anterior. En **Registros** sí se ve el día de hoy.

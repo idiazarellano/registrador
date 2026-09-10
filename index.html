@@ -79,6 +79,18 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .task .ttext{flex:1;min-width:0;text-align:left;font-size:14px;padding:4px 0}
 .task.done .ttext{text-decoration:line-through;color:var(--ink-3)}
 .tplay{width:32px;height:32px;flex:none;border-radius:9px;background:var(--surface-2);color:var(--ink-2);font-size:12px}
+/* Barras verticales apiladas: día tipo y día de la semana. */
+.hourbars{display:flex;align-items:flex-end;gap:2px;height:132px;margin-top:12px}
+.hcol{flex:1;min-width:0;height:100%}
+.vbar{height:100%;display:flex;align-items:flex-end;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.vstack{width:100%;display:flex;flex-direction:column-reverse;min-height:1px}
+.vstack i{display:block;width:100%;min-height:0}
+.dowbars{display:flex;align-items:flex-end;gap:6px;margin-top:12px}
+.dcol{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.dcol .vbar{height:120px;width:100%}
+.dcol .dlab{font-size:12px;font-weight:800;color:var(--ink-2)}
+.dcol .dval{font-size:10px;color:var(--ink-3)}
+.weeksvg{width:100%;height:120px;margin-top:12px;color:var(--ink)}
 .delta{font-weight:700}
 .delta.up,.delta.down{color:var(--ink-2)}
 .delta.flat{color:var(--ink-3)}
@@ -545,7 +557,7 @@ function importJSON(text,mode){
 }
 
 /* ============ Interfaz ============ */
-const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[]};
+const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[],analysis:'resumen',statCat:null,weeks:26};
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let toastTimer;
@@ -763,11 +775,40 @@ function deltaHTML(now,before){
   const d=now-before; if(Math.abs(d)<10*MIN) return `<span class="delta flat">≈ igual</span>`;
   return `<span class="delta ${d>0?'up':'down'}">${d>0?'▲':'▼'} ${fmtDur(Math.abs(d))}</span>`;
 }
-function viewStats(){
-  const today=dayStart(Date.now()), n=state.range;
-  const statDays=[], prevDays=[];
-  for(let i=1;i<=n;i++) statDays.push(dayStart(today-i*DAY+HOUR*12));
-  for(let i=n+1;i<=2*n;i++) prevDays.push(dayStart(today-i*DAY+HOUR*12));
+/* Recorte de un registro a una ventana [a,b); null si no la toca. */
+function clipEntry(e,a,b){const s=Math.max(e.start,a),en=Math.min(endOf(e),b);return en>s?[s,en]:null;}
+/* Reparto por hora del día (0–23) de todos los días dados. Ninguna categoría está
+   escrita a mano: se recorren las que aparezcan en los registros. */
+function hourMatrix(days){
+  const hours=Array.from({length:24},()=>({m:new Map(),t:0}));
+  for(const ds of days) for(const e of entriesOfDay(ds)) for(let h=0;h<24;h++){
+    const a=ds+h*HOUR, c=clipEntry(e,a,a+HOUR); if(!c) continue;
+    const cell=hours[h], ms=c[1]-c[0];
+    cell.m.set(e.cat,(cell.m.get(e.cat)||0)+ms); cell.t+=ms;
+  }
+  return hours;
+}
+/* Barra vertical apilada: se ordenan las categorías como en Ajustes para que el
+   apilado sea estable de una columna a otra. */
+function stackHTML(map,full,height){
+  const order=data.categories.map(c=>c.id).filter(id=>map.has(id));
+  return `<div class="vbar"><div class="vstack" style="height:${Math.min(100,height*100)}%">${
+    order.map(id=>`<i style="flex:${map.get(id)} 1 0;background:${catById(id).color}"></i>`).join('')}</div></div>`;
+}
+function legendHTML(ids){
+  return `<div class="legend" style="margin-top:10px">${data.categories.filter(c=>ids.has(c.id)).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>`;
+}
+function weekStart(ms){const d=new Date(ms);const wd=(d.getDay()+6)%7;return new Date(d.getFullYear(),d.getMonth(),d.getDate()-wd).getTime();}
+function statCat(){
+  if(state.statCat&&data.categories.some(c=>c.id===state.statCat)) return state.statCat;
+  const m=new Map();
+  for(let i=1;i<=90;i++) for(const g of segmentsOfDay(dayStart(dayStart(Date.now())-i*DAY+HOUR*12))) m.set(g.e.cat,(m.get(g.e.cat)||0)+g.ms);
+  const top=[...m.entries()].sort((a,b)=>b[1]-a[1])[0];
+  return top?top[0]:(activeCats()[0]||{}).id;
+}
+
+function statsResumen(statDays,n){
+  const prevDays=[]; for(let i=n+1;i<=2*n;i++) prevDays.push(dayStart(dayStart(Date.now())-i*DAY+HOUR*12));
   const cur=periodTotals(statDays), prev=periodTotals(prevDays);
   const rows=[...cur.m.entries()].map(([id,ms])=>({c:catById(id),ms,prev:prev.m.get(id)||0})).sort((a,b)=>b.ms-a.ms);
   const max=rows.length?rows[0].ms:1;
@@ -775,10 +816,7 @@ function viewStats(){
   const restCount=statDays.filter(isRest).length;
   let workSum=0;for(const ds of workDays)for(const g of segmentsOfDay(ds))workSum+=g.ms;
   const perCat=(id,list)=>{let w=0;for(const ds of list)for(const g of segmentsOfDay(ds))if(g.e.cat===id)w+=g.ms;return w;};
-  return `<div class="topbar"><h1>Datos</h1>${gearBtn}</div>
-    <div class="seg-control">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${state.range===k}">${k} días</button>`).join('')}</div>
-    <p class="sub" style="font-size:12px;color:var(--ink-3);margin:8px 2px 0">${fmtDayLong(statDays[n-1])} → ${fmtDayLong(statDays[0])}. Hoy no cuenta hasta que termine.</p>
-    <section class="card">
+  return `<section class="card">
       <div class="section-head"><h2>Por categoría</h2><span class="sub num" style="font-size:12px;color:var(--ink-2)">${fmtDur(cur.s)} en total</span></div>
       <div class="totals" style="margin-top:12px">${rows.length?rows.map(r=>`<div class="trow">
         <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
@@ -790,11 +828,95 @@ function viewStats(){
     </section>
     ${statsMarksHTML(statDays)}
     <section class="card">
-      <div class="section-head"><h2>Día a día</h2><span class="label">horas registradas</span></div>
+      <div class="section-head"><h2>Día a día</h2><span class="label">toca para editarlo</span></div>
       <div class="dayrows" style="margin-top:10px">${statDays.slice().reverse().map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
         return `<button class="dayrow ${isRest(ds)?'rest':''}" data-day="${ds}" data-goto="registros"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span><span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
     </section>`;
+}
+
+/* Día tipo: a qué hora sueles hacer cada cosa. La altura de cada columna es la parte
+   de esa hora que llegas a tener registrada; el hueco de arriba es lo no registrado. */
+function statsDiaTipo(statDays){
+  const hours=hourMatrix(statDays), used=new Set();
+  for(const h of hours) for(const id of h.m.keys()) used.add(id);
+  if(!used.size) return '<p class="empty">Sin registros en este periodo.</p>';
+  const n=statDays.length;
+  const top=hours.map(h=>{const e=[...h.m.entries()].sort((a,b)=>b[1]-a[1])[0];return e?catById(e[0]).name:null;});
+  return `<section class="card">
+    <div class="section-head"><h2>Día tipo</h2><span class="label">${n} días</span></div>
+    <div class="hourbars">${hours.map((h,i)=>`<div class="hcol" title="${pad(i)}:00 · ${top[i]?esc(top[i]):'sin registrar'}">${stackHTML(h.m,1,h.t/(n*HOUR))}</div>`).join('')}</div>
+    <div class="ticks"><span>0</span><span>3</span><span>6</span><span>9</span><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    ${legendHTML(used)}
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:10px">Cada columna es una hora del día. Lo que le falta para llegar arriba es tiempo sin registrar.</p>
+  </section>`;
+}
+
+/* Semana: media de cada día de la semana. Los días de descanso no cuentan. */
+function statsSemana(statDays){
+  const dows=Array.from({length:7},()=>({m:new Map(),t:0,n:0}));
+  for(const ds of statDays){
+    if(isRest(ds)) continue;
+    const i=(new Date(ds).getDay()+6)%7, cell=dows[i]; cell.n++;
+    for(const g of segmentsOfDay(ds)){ cell.m.set(g.e.cat,(cell.m.get(g.e.cat)||0)+g.ms); cell.t+=g.ms; }
+  }
+  const used=new Set(); for(const c of dows) for(const id of c.m.keys()) used.add(id);
+  if(!used.size) return '<p class="empty">Sin registros en este periodo.</p>';
+  const avg=dows.map(c=>c.n?c.t/c.n:0), max=Math.max(...avg,1);
+  const names=['L','M','X','J','V','S','D'];
+  return `<section class="card">
+    <div class="section-head"><h2>Por día de la semana</h2><span class="label">media por día</span></div>
+    <div class="dowbars">${dows.map((c,i)=>`<div class="dcol">
+      ${stackHTML(c.m,1,avg[i]/max)}
+      <span class="dlab">${names[i]}</span><span class="dval num">${c.n?fmtHours(avg[i]):'—'}</span></div>`).join('')}</div>
+    ${legendHTML(used)}
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:10px">Media de los ${dows.reduce((a,c)=>a+c.n,0)} días del periodo que no son de descanso.</p>
+  </section>`;
+}
+
+/* Progresión: una barra por semana, la unidad que perdona los días malos.
+   Sin metas, sin rachas y sin colores de aprobado o suspenso: solo la forma del último medio año. */
+function statsProgresion(){
+  const id=statCat(), c=catById(id), W=state.weeks, cw=weekStart(Date.now());
+  const weeks=[];
+  for(let i=W;i>=1;i--){
+    const d=new Date(cw), ws=new Date(d.getFullYear(),d.getMonth(),d.getDate()-7*i).getTime();
+    let ms=0;
+    for(let k=0;k<7;k++){ const ds=dayStart(ws+k*DAY+HOUR*12); for(const g of segmentsOfDay(ds)) if(g.e.cat===id) ms+=g.ms; }
+    weeks.push({ws,ms});
+  }
+  const avg4=weeks.map((_,i)=>{const a=weeks.slice(Math.max(0,i-3),i+1);return a.reduce((x,w)=>x+w.ms,0)/a.length;});
+  const max=Math.max(...weeks.map(w=>w.ms),HOUR);
+  const last4=weeks.slice(-4).reduce((a,w)=>a+w.ms,0)/4, prev4=weeks.slice(-8,-4).reduce((a,w)=>a+w.ms,0)/Math.max(1,weeks.slice(-8,-4).length);
+  const VW=320, VH=110, bw=VW/weeks.length, y=ms=>VH-ms/max*(VH-8);
+  const pts=avg4.map((m,i)=>`${(i*bw+bw/2).toFixed(1)},${y(m).toFixed(1)}`).join(' ');
+  const mm=new Date(weeks[0].ws), mm2=new Date(weeks[weeks.length-1].ws);
+  return `<section class="card">
+    <div class="section-head"><h2>${esc(c.name)}, semana a semana</h2><span class="label">${fmtHours(max)} máx.</span></div>
+    <svg class="weeksvg" viewBox="0 0 ${VW} ${VH+2}" preserveAspectRatio="none" role="img" aria-label="Horas por semana">
+      ${weeks.map((w,i)=>`<rect x="${(i*bw+bw*0.12).toFixed(1)}" y="${y(w.ms).toFixed(1)}" width="${(bw*0.76).toFixed(1)}" height="${(VH-y(w.ms)).toFixed(1)}" fill="${c.color}" opacity=".35"></rect>`).join('')}
+      <polyline points="${pts}" fill="none" stroke="${c.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+      <line x1="0" y1="${VH}" x2="${VW}" y2="${VH}" stroke="currentColor" opacity=".15"></line>
+    </svg>
+    <div class="ticks"><span>${MON[mm.getMonth()]}</span><span>${MON[mm2.getMonth()]}</span></div>
+    <p style="margin:10px 0 0;font-size:14px;color:var(--ink-2)">Últimas 4 semanas: <strong class="num">${fmtDur(last4)}</strong> de media a la semana.${prev4?` Las 4 anteriores: <strong class="num">${fmtDur(prev4)}</strong>.`:''}</p>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:8px">La línea es la media de cuatro semanas. La semana en curso no aparece hasta que termina.</p>
+  </section>`;
+}
+
+const ANALYSES=[['resumen','Resumen'],['diatipo','Día tipo'],['semana','Semana'],['progresion','Progresión']];
+function viewStats(){
+  const today=dayStart(Date.now()), n=state.range, a=state.analysis;
+  const statDays=[]; for(let i=1;i<=n;i++) statDays.push(dayStart(today-i*DAY+HOUR*12));
+  const second = a==='progresion'
+    ? `<div class="catpick" style="margin-top:8px">${activeCats().map(c=>`<button data-statcat="${c.id}" class="${c.id===statCat()?'on':''}"><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</button>`).join('')}</div>
+       <div class="seg-control" style="margin-top:8px">${[12,26,52].map(k=>`<button data-weeks="${k}" aria-pressed="${state.weeks===k}">${k} semanas</button>`).join('')}</div>`
+    : `<div class="seg-control" style="margin-top:8px">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${state.range===k}">${k} días</button>`).join('')}</div>
+       <p class="sub" style="font-size:12px;color:var(--ink-3);margin:8px 2px 0">${fmtDayLong(statDays[n-1])} → ${fmtDayLong(statDays[0])}. Hoy no cuenta hasta que termine.</p>`;
+  return `<div class="topbar"><h1>Datos</h1>${gearBtn}</div>
+    <div class="seg-control">${ANALYSES.map(([k,l])=>`<button data-analysis="${k}" aria-pressed="${a===k}">${l}</button>`).join('')}</div>
+    ${second}
+    ${a==='resumen'?statsResumen(statDays,n):a==='diatipo'?statsDiaTipo(statDays):a==='semana'?statsSemana(statDays):statsProgresion()}`;
 }
 
 function viewAjustes(){
@@ -1023,6 +1145,9 @@ document.addEventListener('click',ev=>{
   if(d.gapStart){openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start:+d.gapStart,end:+d.gapEnd});return;}
   if(d.adj){const r=running();if(!r)return;const ns=r.start+(+d.adj)*MIN;if(ns>roundTo(Date.now())){toast('El inicio no puede ser futuro');return;}r.start=ns;const m=resolveOverlaps(r);if(m)toast(m);save();render();return;}
   if(d.range){state.range=+d.range;render();return;}
+  if(d.analysis){state.analysis=d.analysis;render();return;}
+  if(d.statcat){state.statCat=d.statcat;render();return;}
+  if(d.weeks){state.weeks=+d.weeks;render();return;}
   if(d.day){state.selDay=dayStart(+d.day);render();return;}
   if(d.cat){const c=catById(d.cat);state.catEdit={id:c.id,name:c.name,color:c.color,icon:c.icon||''};state.sheet='cat';renderSheet();return;}
   if(d.theme){data.settings.theme=d.theme;save();render();return;}

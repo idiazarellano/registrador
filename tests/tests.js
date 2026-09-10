@@ -177,3 +177,25 @@ for(const v of ['hoy','tareas','registros','stats','ajustes']){ state.view=v; tr
 state.view='hoy';
 print('FALLOS5: '+fails);
 })();
+;(function(){
+let fails=0; const chk=(n,c)=>{if(!c)fails++;print((c?'OK  ':'FAIL')+' '+n);};
+const H=3600000,M=60000,D=86400000; const t0=dayStart(Date.now())-D;
+data.entries=[{id:'a',cat:'c1',start:t0+9*H,end:t0+11*H+30*M},{id:'b',cat:'c2',start:t0+14*H,end:t0+15*H}];
+data.restDays=[];
+// reparto por hora
+const hm=hourMatrix([t0]);
+chk('hora 9 entera en c1', hm[9].m.get('c1')===H && hm[9].t===H);
+chk('hora 11 media hora', hm[11].m.get('c1')===30*M);
+chk('hora 12 vacía', hm[12].t===0);
+chk('hora 14 en c2', hm[14].m.get('c2')===H);
+// la semana empieza en lunes
+const lun=weekStart(t0); chk('weekStart cae en lunes', new Date(lun).getDay()===1);
+chk('weekStart idempotente', weekStart(lun)===lun);
+// las cuatro vistas se pintan
+state.view='stats';
+for(const a of ['resumen','diatipo','semana','progresion']){
+  state.analysis=a; try{const v=viewStats(); chk('viewStats '+a, v.length>200);}catch(e){chk('viewStats '+a+' '+e.message,false)}
+}
+state.analysis='resumen'; state.view='hoy'; data.entries=[];
+print('FALLOS6: '+fails);
+})();
