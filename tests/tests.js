@@ -199,3 +199,34 @@ for(const a of ['resumen','diatipo','semana','progresion']){
 state.analysis='resumen'; state.view='hoy'; data.entries=[];
 print('FALLOS6: '+fails);
 })();
+;(function(){
+let fails=0; const chk=(n,c)=>{if(!c)fails++;print((c?'OK  ':'FAIL')+' '+n);};
+const H=3600000,M=60000,D=86400000;
+// huecos: entre registros, nunca antes del primero ni después del último (salvo hoy)
+const t0=dayStart(Date.now())-D;
+data.entries=[{id:'a',cat:'c1',start:t0+9*H,end:t0+10*H},{id:'b',cat:'c2',start:t0+11*H,end:t0+12*H}];
+data.restDays=[];
+let g=gapsOfDay(t0);
+chk('un hueco de 1 h', g.length===1 && g[0].b-g[0].a===H);
+chk('el hueco viene detrás de c1', g[0].after==='c1');
+chk('coincide con unassignedOfDay', g.reduce((a,x)=>a+(x.b-x.a),0)===unassignedOfDay(t0));
+data.restDays=[dayKey(t0)]; chk('día de descanso sin huecos', gapsOfDay(t0).length===0); data.restDays=[];
+// días agrupables: vectores por proporción
+data.entries=[];
+for(let i=1;i<=20;i++){const d=dayStart(dayStart(Date.now())-i*D+12*H);
+  data.entries.push({id:'x'+i,cat:i%2?'c1':'c2',start:d+9*H,end:d+13*H},{id:'y'+i,cat:i%2?'c2':'c1',start:d+14*H,end:d+15*H});}
+const days=[];for(let i=1;i<=20;i++)days.push(dayStart(dayStart(Date.now())-i*D+12*H));
+const dv=dayVectors(days);
+chk('20 días con vector', dv.rows.length===20);
+chk('vectores suman 1', dv.rows.every(r=>Math.abs(r.v.reduce((a,x)=>a+x,0)-1)<1e-9));
+const km=bestClustering(dv.rows.map(r=>r.v));
+chk('dos grupos claros: k='+km.k+' silueta '+km.score.toFixed(2), km.k===2 && km.score>0.8);
+const km2=bestClustering(dv.rows.map(r=>r.v));
+chk('mismo resultado en dos pasadas', km2.lab.join('')===km.lab.join(''));
+const pc=pca2(dv.rows.map(r=>r.v));
+chk('pca devuelve una coordenada por día', pc.x.length===20 && pc.y.length===20);
+state.view='stats';
+for(const a of ['tipos','huecos']){ state.analysis=a; try{const v=viewStats(); chk('viewStats '+a, v.length>200);}catch(e){chk('viewStats '+a+' '+e.message,false)} }
+state.analysis='resumen'; state.view='hoy'; data.entries=[];
+print('FALLOS7: '+fails);
+})();

@@ -84,6 +84,9 @@ Arriba de la pantalla se elige el tipo de análisis; la fila de debajo cambia co
 - **Semana**: media de cada día de la semana, apilada por categoría. No cuenta los días de descanso.
 - **Progresión**: una barra por semana de una categoría (12, 26 o 52 semanas) y la línea de la media de cuatro semanas, más una frase con las últimas cuatro semanas frente a las cuatro anteriores. La semana en curso no aparece hasta que termina.
 
+- **Tipos**: agrupa los días del periodo según **cómo** repartes el tiempo (no cuánto registras) con k-medias, eligiendo entre 2 y 4 grupos por silueta. Cada grupo se describe con sus categorías dominantes, cuántos días tiene y en qué días de la semana cae; debajo, una tira con un cuadro por día y un mapa (PCA a dos componentes) donde los días parecidos caen juntos. Necesita al menos 12 días con dos horas registradas o no se dibuja. El arranque de k-medias lleva semilla fija, así que los mismos datos dan siempre el mismo resultado.
+- **Huecos**: cuánto tiempo queda sin registrar, a qué hora se escapa, detrás de qué actividad y cómo de largos son los huecos. Se cuentan igual que "Sin registrar": solo entre el primer y el último registro del día, nunca en días de descanso.
+
 Ninguna vista lleva categorías escritas a mano: todas recorren las que existan en cada momento. Y en Progresión no hay metas, ni rachas, ni colores de aprobado o suspenso: la unidad es la semana justamente para que un día malo no rompa nada.
 
 ## Qué días cuentan en las estadísticas

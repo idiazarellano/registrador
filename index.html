@@ -91,6 +91,17 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .dcol .dlab{font-size:12px;font-weight:800;color:var(--ink-2)}
 .dcol .dval{font-size:10px;color:var(--ink-3)}
 .weeksvg{width:100%;height:120px;margin-top:12px;color:var(--ink)}
+.statbars{display:flex;flex-direction:column;gap:6px}
+.seg-control.small{flex-wrap:wrap}
+.seg-control.small button{flex:1 1 28%;font-size:12px;padding:7px 2px}
+/* Tipos de día: agrupación y mapa. */
+.kcard{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.kcard:last-child{border-bottom:0}
+.kdot{width:14px;height:14px;border-radius:4px;flex:none;margin-top:3px}
+.kstrip{display:flex;flex-wrap:wrap;gap:3px;margin-top:12px}
+.kcell{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff}
+.kcell.none{background:var(--surface-2);color:var(--ink-3)}
+.mapsvg{width:100%;height:200px;margin-top:8px;color:var(--ink-3)}
 .delta{font-weight:700}
 .delta.up,.delta.down{color:var(--ink-2)}
 .delta.flat{color:var(--ink-3)}
@@ -904,19 +915,220 @@ function statsProgresion(){
   </section>`;
 }
 
-const ANALYSES=[['resumen','Resumen'],['diatipo','Día tipo'],['semana','Semana'],['progresion','Progresión']];
+/* ============ Tipos de día ============
+   Agrupa los días del periodo por CÓMO repartes el tiempo, no por cuánto registras:
+   cada día es un vector de proporciones por categoría, así un día con menos horas
+   apuntadas no se va a un grupo aparte solo por eso.
+   k-medias con arranque k-medias++ y semilla fija (mismos datos, mismo resultado);
+   el número de grupos se elige por silueta entre 2 y 4.
+   Es descripción, no predicción: con pocos días no dice nada, de ahí el mínimo. */
+const KCOLORS=['#7c3aed','#0f6e5e','#a87400','#b0306e'];
+const KLETTERS=['A','B','C','D'];
+const KMIN=12;
+function dayVectors(days){
+  const rows=[];
+  for(const ds of days){
+    if(isRest(ds)) continue;
+    const m=new Map(); let t=0;
+    for(const g of segmentsOfDay(ds)){ m.set(g.e.cat,(m.get(g.e.cat)||0)+g.ms); t+=g.ms; }
+    if(t<2*HOUR) continue; // un día casi vacío no describe nada
+    rows.push({ds,t,m});
+  }
+  const cats=data.categories.map(c=>c.id).filter(id=>rows.some(r=>(r.m.get(id)||0)>0));
+  for(const r of rows) r.v=cats.map(id=>(r.m.get(id)||0)/r.t);
+  return {cats,rows};
+}
+const dist2=(a,b)=>{let s=0;for(let i=0;i<a.length;i++){const d=a[i]-b[i];s+=d*d;}return s;};
+function seeded(seed){return()=>{seed=(seed*1103515245+12345)%2147483648;return seed/2147483648;};}
+function kmeans(V,k,seed){
+  const rnd=seeded(seed), n=V.length;
+  const cents=[V[Math.floor(rnd()*n)].slice()];
+  while(cents.length<k){ // k-medias++: cada centro nuevo, lejos de los que ya hay
+    const d=V.map(v=>Math.min(...cents.map(c=>dist2(v,c))));
+    let acc=d.reduce((a,b)=>a+b,0)*rnd(), i=0;
+    while(i<n-1&&(acc-=d[i])>0) i++;
+    cents.push(V[i].slice());
+  }
+  const lab=new Array(n).fill(0);
+  for(let it=0;it<25;it++){
+    let moved=false;
+    for(let i=0;i<n;i++){
+      let best=0,bd=Infinity;
+      for(let c=0;c<k;c++){const dd=dist2(V[i],cents[c]); if(dd<bd){bd=dd;best=c;}}
+      if(lab[i]!==best){lab[i]=best;moved=true;}
+    }
+    for(let c=0;c<k;c++){
+      const mem=V.filter((_,i)=>lab[i]===c); if(!mem.length) continue;
+      cents[c]=cents[c].map((_,j)=>mem.reduce((a,v)=>a+v[j],0)/mem.length);
+    }
+    if(!moved&&it) break;
+  }
+  return {lab,cents,inertia:V.reduce((a,v,i)=>a+dist2(v,cents[lab[i]]),0)};
+}
+function silhouette(V,lab,k){ // −1 mal agrupado, 1 grupos claros
+  const n=V.length; let sum=0, cnt=0;
+  for(let i=0;i<n;i++){
+    const d=Array.from({length:k},()=>[0,0]);
+    for(let j=0;j<n;j++){ if(i===j) continue; const c=lab[j]; d[c][0]+=Math.sqrt(dist2(V[i],V[j])); d[c][1]++; }
+    const own=d[lab[i]][1]?d[lab[i]][0]/d[lab[i]][1]:0;
+    let other=Infinity;
+    for(let c=0;c<k;c++) if(c!==lab[i]&&d[c][1]) other=Math.min(other,d[c][0]/d[c][1]);
+    if(other===Infinity||Math.max(own,other)===0) continue;
+    sum+=(other-own)/Math.max(own,other); cnt++;
+  }
+  return cnt?sum/cnt:0;
+}
+function bestClustering(V){
+  let best=null;
+  const kmax=Math.min(4,Math.floor(V.length/4));
+  for(let k=2;k<=kmax;k++){
+    let run=null;
+    for(let s=1;s<=6;s++){ const r=kmeans(V,k,s*7919); if(!run||r.inertia<run.inertia) run=r; }
+    const score=silhouette(V,run.lab,k);
+    if(!best||score>best.score) best=Object.assign({k,score},run);
+  }
+  return best;
+}
+/* PCA a dos componentes por iteración de potencias sobre la covarianza.
+   Solo sirve para colocar los días en un mapa; los ejes se explican con sus pesos. */
+function pca2(V){
+  const n=V.length, d=V[0].length;
+  const mean=Array.from({length:d},(_,j)=>V.reduce((a,v)=>a+v[j],0)/n);
+  const X=V.map(v=>v.map((x,j)=>x-mean[j]));
+  const C=Array.from({length:d},()=>new Array(d).fill(0));
+  for(const x of X) for(let i=0;i<d;i++) for(let j=0;j<d;j++) C[i][j]+=x[i]*x[j]/n;
+  const mul=(M,v)=>M.map(r=>r.reduce((a,x,j)=>a+x*v[j],0));
+  const norm=v=>{const m=Math.sqrt(v.reduce((a,x)=>a+x*x,0))||1;return v.map(x=>x/m);};
+  const power=M=>{let v=norm(Array.from({length:d},(_,i)=>Math.sin(i+1)));for(let i=0;i<120;i++)v=norm(mul(M,v));return v;};
+  const p1=power(C);
+  const l1=mul(C,p1).reduce((a,x,i)=>a+x*p1[i],0);
+  const p2=power(C.map((r,i)=>r.map((x,j)=>x-l1*p1[i]*p1[j])));
+  const proj=p=>X.map(x=>x.reduce((a,q,j)=>a+q*p[j],0));
+  return {p1,p2,x:proj(p1),y:proj(p2)};
+}
+function axisLabel(load,cats){
+  const idx=load.map((w,i)=>[w,i]).sort((a,b)=>a[0]-b[0]);
+  const lo=idx[0], hi=idx[idx.length-1];
+  return `${esc(catById(cats[lo[1]]).name)} ← → ${esc(catById(cats[hi[1]]).name)}`;
+}
+function clusterName(cent,cats){
+  const top=cent.map((w,i)=>({w,c:catById(cats[i])})).sort((a,b)=>b.w-a.w).filter(x=>x.w>=0.12).slice(0,3);
+  return top.length?top.map(x=>`${esc(x.c.name)} ${Math.round(x.w*100)} %`).join(' · '):'repartido';
+}
+function statsTipos(days){
+  const {cats,rows}=dayVectors(days);
+  const head=`<div class="section-head"><h2>Tipos de día</h2><span class="label">${rows.length} días</span></div>`;
+  if(cats.length<2||rows.length<KMIN)
+    return `<section class="card">${head}<p class="empty">Hacen falta al menos ${KMIN} días con dos horas registradas (llevas ${rows.length} en este periodo) y dos categorías.</p>
+      ${state.range<90?`<div class="row"><button class="btn sm" data-range="${state.range<30?30:90}">Probar con ${state.range<30?30:90} días</button></div>`:''}</section>`;
+  const V=rows.map(r=>r.v), km=bestClustering(V);
+  const groups=Array.from({length:km.k},(_,c)=>({c,days:rows.filter((_,i)=>km.lab[i]===c)}));
+  const DOWL=['L','M','X','J','V','S','D'];
+  const P=pca2(V);
+  const xs=P.x, ys=P.y;
+  const rng=a=>{const mn=Math.min(...a),mx=Math.max(...a);return [mn,(mx-mn)||1];};
+  const [x0,xr]=rng(xs), [y0,yr]=rng(ys);
+  const byDay=new Map(); rows.forEach((r,i)=>byDay.set(r.ds,km.lab[i]));
+  const chrono=days.slice().reverse();
+  return `<section class="card">${head}
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin:0">Agrupados por cómo repartes el tiempo, no por cuánto registras. ${km.score>=0.35?'Los grupos salen bien separados.':km.score>=0.2?'Los grupos se distinguen, pero con solapamiento.':'Ojo: tus días se parecen mucho entre sí, la división es endeble.'}</p>
+    <div style="margin-top:10px">${groups.map(g=>{
+      const cent=km.cents[g.c], n=g.days.length;
+      const hrs=g.days.reduce((a,r)=>a+r.t,0)/Math.max(1,n);
+      const dw=new Map(); for(const r of g.days){const i=(new Date(r.ds).getDay()+6)%7; dw.set(i,(dw.get(i)||0)+1);}
+      const tops=[...dw.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3).filter(e=>e[1]>1).map(e=>DOWL[e[0]]).join(' ');
+      return `<div class="kcard"><span class="kdot" style="background:${KCOLORS[g.c]}"></span>
+        <span class="grow"><strong>${KLETTERS[g.c]} · ${clusterName(cent,cats)}</strong><br>
+        <span class="desc">${n} ${n===1?'día':'días'} · ${fmtDur(hrs)} registradas de media${tops?` · sobre todo ${tops}`:''}</span></span></div>`;}).join('')}</div>
+    <div class="kstrip">${chrono.map(ds=>{
+      const c=byDay.get(ds), d=new Date(ds);
+      return `<button class="kcell ${c==null?'none':''}" data-day="${ds}" data-goto="registros" style="${c==null?'':`background:${KCOLORS[c]}`}" title="${fmtDayLong(ds)}">${c==null?(isRest(ds)?'🌴':'·'):KLETTERS[c]}</button>`;}).join('')}</div>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:8px">Un cuadro por día, del más antiguo al más reciente. Los grises son días de descanso o con menos de dos horas registradas. Toca uno para abrirlo.</p>
+  </section>
+  <section class="card"><div class="section-head"><h2>Mapa de días</h2><span class="label">días parecidos, cerca</span></div>
+    <svg class="mapsvg" viewBox="0 0 320 200" role="img" aria-label="Mapa de días">
+      <line x1="0" y1="100" x2="320" y2="100" stroke="currentColor" opacity=".18"></line>
+      <line x1="160" y1="0" x2="160" y2="200" stroke="currentColor" opacity=".18"></line>
+      ${rows.map((r,i)=>`<circle cx="${(14+(xs[i]-x0)/xr*292).toFixed(1)}" cy="${(186-(ys[i]-y0)/yr*172).toFixed(1)}" r="5" fill="${KCOLORS[km.lab[i]]}" opacity=".75"></circle>`).join('')}
+    </svg>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:6px">Horizontal: ${axisLabel(P.p1,cats)}<br>Vertical: ${axisLabel(P.p2,cats)}</p>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:8px">Cada punto es un día; los días parecidos caen juntos. Los ejes son las dos direcciones en las que tus días más se diferencian entre sí, no una medida de nada bueno ni malo.</p>
+  </section>`;
+}
+
+/* ============ Huecos ============
+   Los huecos entre registros no son solo ruido: dicen a qué hora se te escapa el
+   registro y detrás de qué actividad. Se cuentan igual que en "Sin registrar":
+   solo entre el primer y el último registro del día, y nunca en días de descanso. */
+function gapsOfDay(ds){
+  if(isRest(ds)) return [];
+  const de=dayEnd(ds);
+  const segs=entriesOfDay(ds).map(e=>({a:Math.max(e.start,ds),b:Math.min(endOf(e),de),cat:e.cat})).filter(x=>x.b>x.a).sort((p,q)=>p.a-q.a);
+  if(!segs.length) return [];
+  const out=[]; let cur=segs[0].b, curCat=segs[0].cat;
+  for(const s of segs.slice(1)){
+    if(s.a>cur) out.push({a:cur,b:s.a,after:curCat});
+    if(s.b>cur){cur=s.b;curCat=s.cat;}
+  }
+  const now=Date.now();
+  if(dayKey(ds)===dayKey(now)&&!running()&&now>cur) out.push({a:cur,b:now,after:curCat});
+  return out;
+}
+const GAP_BANDS=[[0,15*MIN,'menos de 15 min'],[15*MIN,HOUR,'de 15 min a 1 h'],[HOUR,3*HOUR,'de 1 a 3 h'],[3*HOUR,Infinity,'más de 3 h']];
+function statsHuecos(days){
+  const gaps=[]; for(const ds of days) for(const g of gapsOfDay(ds)) gaps.push(g);
+  const head=`<div class="section-head"><h2>Huecos</h2><span class="label">${days.length} días</span></div>`;
+  if(!gaps.length) return `<section class="card">${head}<p class="empty">No hay huecos entre registros en este periodo. O lo apuntas todo, o hay pocos días con registros.</p></section>`;
+  const total=gaps.reduce((a,g)=>a+(g.b-g.a),0);
+  let reg=0; for(const ds of days) for(const sg of segmentsOfDay(ds)) reg+=sg.ms;
+  const withGaps=days.filter(ds=>gapsOfDay(ds).length).length;
+  // a qué hora caen
+  const byHour=new Array(24).fill(0);
+  for(const g of gaps) for(let h=0;h<24;h++){
+    const ds=dayStart(g.a), a=ds+h*HOUR, s=Math.max(g.a,a), e=Math.min(g.b,a+HOUR);
+    if(e>s) byHour[h]+=e-s;
+  }
+  const maxH=Math.max(...byHour,1);
+  // detrás de qué categoría
+  const after=new Map();
+  for(const g of gaps){ const k=g.after; const v=after.get(k)||{n:0,ms:0}; v.n++; v.ms+=g.b-g.a; after.set(k,v); }
+  const afterRows=[...after.entries()].map(([id,v])=>({c:catById(id),...v})).sort((a,b)=>b.ms-a.ms).slice(0,4);
+  const bands=GAP_BANDS.map(([lo,hi,name])=>{const l=gaps.filter(g=>{const d=g.b-g.a;return d>=lo&&d<hi;});return {name,n:l.length,ms:l.reduce((a,g)=>a+(g.b-g.a),0)};}).filter(b=>b.n);
+  const maxB=Math.max(...bands.map(b=>b.ms),1);
+  return `<section class="card">${head}
+    <p style="margin:0;font-size:14px;color:var(--ink-2)"><strong class="num">${fmtDur(total)}</strong> sin registrar en ${gaps.length} huecos, repartidos en ${withGaps} ${withGaps===1?'día':'días'}. Es un <strong class="num">+${Math.round(total/Math.max(1,reg)*100)} %</strong> sobre lo registrado.</p>
+    <div class="section-head" style="margin-top:16px"><h2>A qué hora se escapan</h2></div>
+    <div class="hourbars">${byHour.map((ms,i)=>`<div class="hcol" title="${pad(i)}:00 · ${fmtDur(ms)}"><div class="vbar"><div class="vstack" style="height:${ms/maxH*100}%"><i style="flex:1 1 0;background:var(--ink-3)"></i></div></div></div>`).join('')}</div>
+    <div class="ticks"><span>0</span><span>3</span><span>6</span><span>9</span><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="section-head" style="margin-top:16px"><h2>Detrás de qué actividad</h2></div>
+    <div class="totals" style="margin-top:10px">${afterRows.map(r=>`<div class="trow">
+      <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
+      <span class="v num">${fmtDur(r.ms)} · ${r.n} ${r.n===1?'hueco':'huecos'}</span>
+      <span class="bar"><i style="width:${r.ms/afterRows[0].ms*100}%;background:${r.c.color}"></i></span>
+      <span class="sub num">media ${fmtDur(r.ms/r.n)} por hueco</span></div>`).join('')}</div>
+    <div class="section-head" style="margin-top:16px"><h2>Cómo de largos</h2></div>
+    <div class="totals" style="margin-top:10px">${bands.map(b=>`<div class="trow">
+      <span class="n">${b.name}</span><span class="v num">${b.n} · ${fmtDur(b.ms)}</span>
+      <span class="bar"><i style="width:${b.ms/maxB*100}%;background:var(--ink-3)"></i></span></div>`).join('')}</div>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:14px">Un hueco corto suele ser un cambio que se apuntó tarde; uno largo, un rato que no llegaste a registrar. Solo se cuentan los huecos entre el primer y el último registro del día, y nunca en días de descanso.</p>
+  </section>`;
+}
+
+const ANALYSES=[['resumen','Resumen'],['diatipo','Día'],['semana','Semana'],['progresion','Progreso'],['tipos','Tipos'],['huecos','Huecos']];
 function viewStats(){
   const today=dayStart(Date.now()), n=state.range, a=state.analysis;
   const statDays=[]; for(let i=1;i<=n;i++) statDays.push(dayStart(today-i*DAY+HOUR*12));
   const second = a==='progresion'
-    ? `<div class="catpick" style="margin-top:8px">${activeCats().map(c=>`<button data-statcat="${c.id}" class="${c.id===statCat()?'on':''}"><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</button>`).join('')}</div>
-       <div class="seg-control" style="margin-top:8px">${[12,26,52].map(k=>`<button data-weeks="${k}" aria-pressed="${state.weeks===k}">${k} semanas</button>`).join('')}</div>`
-    : `<div class="seg-control" style="margin-top:8px">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${state.range===k}">${k} días</button>`).join('')}</div>
-       <p class="sub" style="font-size:12px;color:var(--ink-3);margin:8px 2px 0">${fmtDayLong(statDays[n-1])} → ${fmtDayLong(statDays[0])}. Hoy no cuenta hasta que termine.</p>`;
+    ? `<div class="catpick">${activeCats().map(c=>`<button data-statcat="${c.id}" class="${c.id===statCat()?'on':''}"><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</button>`).join('')}</div>
+       <div class="seg-control">${[12,26,52].map(k=>`<button data-weeks="${k}" aria-pressed="${state.weeks===k}">${k} semanas</button>`).join('')}</div>`
+    : `<div class="seg-control">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${state.range===k}">${k} días</button>`).join('')}</div>
+       <p class="sub" style="font-size:12px;color:var(--ink-3);margin:2px 2px 0">${fmtDayLong(statDays[n-1])} → ${fmtDayLong(statDays[0])}. Hoy no cuenta hasta que termine.</p>`;
   return `<div class="topbar"><h1>Datos</h1>${gearBtn}</div>
-    <div class="seg-control">${ANALYSES.map(([k,l])=>`<button data-analysis="${k}" aria-pressed="${a===k}">${l}</button>`).join('')}</div>
-    ${second}
-    ${a==='resumen'?statsResumen(statDays,n):a==='diatipo'?statsDiaTipo(statDays):a==='semana'?statsSemana(statDays):statsProgresion()}`;
+    <div class="statbars">
+      <div class="seg-control small">${ANALYSES.map(([k,l])=>`<button data-analysis="${k}" aria-pressed="${a===k}">${l}</button>`).join('')}</div>
+      ${second}
+    </div>
+    ${a==='resumen'?statsResumen(statDays,n):a==='diatipo'?statsDiaTipo(statDays):a==='semana'?statsSemana(statDays):a==='tipos'?statsTipos(statDays):a==='huecos'?statsHuecos(statDays):statsProgresion()}`;
 }
 
 function viewAjustes(){
