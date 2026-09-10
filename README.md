@@ -4,15 +4,21 @@ Aplicación web de un solo archivo (`index.html`) para registrar en qué dedicas
 
 ## Pantallas
 
-- **Hoy**: lo que está en marcha, las categorías, las marcas del día y los registros de hoy.
+- **Hoy**: lo que está en marcha, las categorías, las marcas y las balanzas del día y los registros de hoy.
 - **Tareas**: recordatorios agrupados por categoría, en listas desplegables.
-- **Registros**: elegir un día y editarlo (barra, totales, huecos, marcas, día de descanso).
-- **Datos**: estadísticas de días completos: por categoría, medias, comparación con el periodo anterior, marcas y día a día.
+- **Registros**: elegir un día y editarlo (barra, totales, huecos, marcas, balanzas, día de descanso).
+- **Datos**: estadísticas de días completos: por categoría, medias, comparación con el periodo anterior, marcas, balanzas y día a día.
 - **Ajustes**: el engranaje de la esquina superior derecha (ya no ocupa pestaña).
 
 ## Marcas (eventos de sí o no)
 
 Cosas que un día se hacen o no, sin horas ni duración: «he leído», «he tomado la pastilla». Se crean en Hoy o en Ajustes → Marcas, se activan tocándolas (en Hoy para hoy, en Registros para el día elegido) y se editan con una pulsación larga. En Datos aparecen los días marcados del periodo y la racha en marcha.
+
+## Balanzas (ocasiones con dos salidas)
+
+Una balanza no es una actividad ni una marca: es **una ocasión que se presenta y se resuelve de una de dos maneras** («me lo callé» / «lo dije»). Se cuentan las veces, no el tiempo, y puede pasar varias veces al mismo día. Se crean en Hoy o en Ajustes → Balanzas, se apuntan tocando uno de los dos lados (en Hoy para hoy, en Registros para el día elegido), el botón ↺ deshace el último toque del día y una pulsación larga sobre un lado abre la edición.
+
+En Datos → Resumen aparecen el reparto del periodo y el total de ocasiones, con una frase de comparación con el periodo anterior. A propósito **no hay rachas ni colores de aprobado o suspenso**, y los dos lados se pintan igual de grandes: si apuntar un lado costara más que el otro, la cuenta dejaría de ser cierta. El número más informativo suele ser el total de ocasiones, no el porcentaje: si sube, casi siempre es que te estás dando cuenta más veces.
 
 ## Tareas
 
@@ -79,7 +85,7 @@ Regla de la inserción: los dos vecinos se ajustan al nuevo registro (se acortan
 
 Arriba de la pantalla se elige el tipo de análisis; la fila de debajo cambia con él (periodo en los tres primeros, categoría y número de semanas en Progresión).
 
-- **Resumen**: totales por categoría con porcentaje, media por día y comparación con el periodo anterior (▲▼), marcas y día a día.
+- **Resumen**: totales por categoría con porcentaje, media por día y comparación con el periodo anterior (▲▼), marcas, balanzas y día a día.
 - **Día tipo**: 24 columnas, una por hora. Cada una reparte por categoría el tiempo registrado en esa hora a lo largo del periodo; lo que le falta para llegar arriba es tiempo sin registrar. Enseña la rutina: a qué hora empiezas de verdad, cuándo se rompe la tarde.
 - **Semana**: media de cada día de la semana, apilada por categoría. No cuenta los días de descanso.
 - **Progresión**: una barra por semana de una categoría (12, 26 o 52 semanas) y la línea de la media de cuatro semanas, más una frase con las últimas cuatro semanas frente a las cuatro anteriores. La semana en curso no aparece hasta que termina.
@@ -101,16 +107,20 @@ Bajo la barra del día seleccionado en Registros y en Totales · N días aparece
 
 ```json
 {
-  "schema": 3,
+  "schema": 4,
   "categories": [{"id": "c1", "name": "Trabajo", "color": "#2a78d6"}],
   "entries": [{"id": "abc", "cat": "c1", "start": 1757059200000, "end": 1757062800000}],
   "restDays": ["2026-09-06"],
   "marks": [{"id": "m1", "name": "He leído", "color": "#3fa34d", "icon": "📖"}],
   "markDays": {"2026-09-06": ["m1"]},
   "tasks": [{"id": "t1", "cat": "c1", "text": "Llamar al fontanero", "done": false, "created": 0, "doneAt": 0}],
+  "balances": [{"id": "b1", "name": "Comentarios de más", "color": "#2a78d6", "icon": "🤐", "a": {"label": "Me lo callé"}, "b": {"label": "Lo dije"}}],
+  "balanceLog": [{"id": "o1", "bid": "b1", "side": "a", "t": 1757062800000}],
   "settings": {"backupMode": "auto", "theme": "system", "granularity": 5},
   "meta": {"created": 0, "updated": 0, "lastBackup": 0, "lastBackupUpdated": 0}
 }
 ```
+
+En `balanceLog`, `t` es el momento del toque; si se apunta en un día pasado, se guarda a mediodía de ese día.
 
 `start` y `end` son milisegundos desde 1970 (hora local del dispositivo al mostrarse). `end` es `null` mientras el registro está en marcha.

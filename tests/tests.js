@@ -1,7 +1,7 @@
 ;(function(){
 const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
 const D=86400000,H=3600000,M=60000; const ds=new Date(); ds.setHours(0,0,0,0); const t0=ds.getTime();
-chk('schema 3', data.schema===3);
+chk('schema 4', data.schema===4);
 chk('backupMode off desde autoBackup:false', data.settings.backupMode==='off' && !('autoBackup' in data.settings));
 chk('migrate schema1 autoBackup:true -> auto', migrate({schema:1,settings:{autoBackup:true}}).settings.backupMode==='auto');
 chk('migrate sin settings -> auto', migrate({schema:1}).settings.backupMode==='auto');
@@ -228,5 +228,22 @@ chk('pca devuelve una coordenada por día', pc.x.length===20 && pc.y.length===20
 state.view='stats';
 for(const a of ['tipos','huecos']){ state.analysis=a; try{const v=viewStats(); chk('viewStats '+a, v.length>200);}catch(e){chk('viewStats '+a+' '+e.message,false)} }
 state.analysis='resumen'; state.view='hoy'; data.entries=[];
+// Balanzas: contar, deshacer, migrar y no mezclarse con las marcas
+chk('migrate v3 crea balanzas vacías', (()=>{const d=migrate({schema:3});return Array.isArray(d.balances)&&Array.isArray(d.balanceLog)&&d.schema===4;})());
+chk('migrate rellena los dos lados', (()=>{const d=migrate({schema:4,balances:[{id:'b1',name:'X',color:'#000'}]});return d.balances[0].a.label==='A'&&d.balances[0].b.label==='B'&&d.balances[0].archived===false;})());
+data.balances=[{id:'b1',name:'Comentarios',color:'#2a78d6',icon:'',archived:false,a:{label:'Me lo callé'},b:{label:'Lo dije'}}];
+data.balanceLog=[];
+const ayer=dayStart(t0-D+12*H);
+addBalance('b1','a',t0); addBalance('b1','a',t0); addBalance('b1','b',t0); addBalance('b1','b',ayer);
+chk('cuenta por lado y día', balOfDay('b1',t0,'a')===2 && balOfDay('b1',t0,'b')===1 && balOfDay('b1',t0)===3 && balOfDay('b1',ayer)===1);
+chk('el toque de un día pasado cae a mediodía', data.balanceLog.filter(x=>x.t<t0)[0].t===ayer+12*H);
+chk('suma de varios días', balOfDays('b1',[t0,ayer])===4 && balOfDays('b1',[t0,ayer],'a')===2);
+chk('deshacer quita el último de ese día', undoBalance('b1',t0)&&balOfDay('b1',t0)===2&&balOfDay('b1',ayer)===1);
+chk('deshacer en día sin ocasiones no hace nada', undoBalance('b1',dayStart(t0-5*D+12*H))===false && data.balanceLog.length===3);
+chk('la fila del día se pinta', balancesHTML(t0).indexOf('Me lo callé')>0);
+chk('estadística con reparto', statsBalancesHTML([t0,ayer],[]).indexOf('ocasiones')>0);
+chk('sin balanzas activas no se pinta nada', (()=>{data.balances[0].archived=true;const r=balancesHTML(t0)===''&&statsBalancesHTML([t0],[])==='';data.balances[0].archived=false;return r;})());
+chk('borrar registros se lleva las ocasiones pero no las balanzas', (()=>{wipeEntries();return data.balanceLog.length===0&&data.balances.length===1;})());
+data.balances=[]; data.balanceLog=[];
 print('FALLOS7: '+fails);
 })();
