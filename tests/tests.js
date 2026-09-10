@@ -1,7 +1,7 @@
 ;(function(){
 const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
 const D=86400000,H=3600000,M=60000; const ds=new Date(); ds.setHours(0,0,0,0); const t0=ds.getTime();
-chk('schema 2', data.schema===2);
+chk('schema 3', data.schema===3);
 chk('backupMode off desde autoBackup:false', data.settings.backupMode==='off' && !('autoBackup' in data.settings));
 chk('migrate schema1 autoBackup:true -> auto', migrate({schema:1,settings:{autoBackup:true}}).settings.backupMode==='auto');
 chk('migrate sin settings -> auto', migrate({schema:1}).settings.backupMode==='auto');
@@ -134,7 +134,8 @@ reset([{cat:'c1',start:T(8),end:T(12)},{cat:'c2',start:T(9),end:T(10)},{cat:'c1'
 chk('solape no cuenta, hueco 12-13', unassignedOfDay(t0)===H);
 reset([{cat:'c1',start:T(23),end:T(25)},{cat:'c2',start:T(26),end:T(27)}]);
 chk('cruce de medianoche: ayer 0', unassignedOfDay(t0)===0);
-chk('cruce de medianoche: hoy 1h (01→02)', unassignedOfDay(t0+86400000)===H);
+// hoy cuenta además desde el último registro hasta ahora (si no hay nada en marcha)
+chk('cruce de medianoche: hoy 1h (01→02) más la cola hasta ahora', unassignedOfDay(t0+86400000)===H+Math.max(0,Date.now()-T(27)));
 // hoy: desde el último hasta ahora si no hay nada en marcha
 const now=Date.now(), td=dayStart(now);
 if(now-td>2*H){
@@ -147,7 +148,32 @@ reset([{cat:'c1',start:T(8),end:T(9)},{cat:'c2',start:T(9),end:T(10)},{cat:'c1',
 const h=dayTotalsHTML(t0); chk('línea del día con +12 %: '+h.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(), h.includes('+13 %')&&h.includes('2h 40')&&h.includes('Trabajo'));
 chk('fila en totales', unassignedRowHTML(20*M,160*M).includes('+13 %'));
 chk('sin huecos no hay fila', unassignedRowHTML(0,160*M)==='');
-state.selDay=t0; state.range=7; try{const v=viewRegistros(); chk('viewRegistros con sin asignar', v.includes('Sin registrar')&&v.includes('daytot'));}catch(e){chk('viewRegistros '+e.message,false)}
+state.selDay=t0; state.range=7;
+try{const v=viewRegistros(); chk('viewRegistros pinta el día elegido', v.includes('daytot')&&v.includes('Elige un día'));}catch(e){chk('viewRegistros '+e.message,false)}
+try{const v=viewStats(); chk('viewStats con sin asignar', v.includes('Sin registrar'));}catch(e){chk('viewStats '+e.message,false)}
+try{const v=viewTareas(); chk('viewTareas vacía', v.includes('Sin tareas'));}catch(e){chk('viewTareas '+e.message,false)}
+try{const v=viewHoy(); chk('viewHoy con marcas vacías', v.includes('Marcas'));}catch(e){chk('viewHoy '+e.message,false)}
+// marcas: alternar y contar
+data.marks=[{id:'m1',name:'Leer',color:'#333',icon:'',archived:false}]; data.markDays={};
+toggleMark('m1',t0); chk('marca puesta', isMarked('m1',t0));
+toggleMark('m1',t0); chk('marca quitada', !isMarked('m1',t0)&&!Object.keys(data.markDays).length);
+// tareas: crear, hacer, agrupar
+data.tasks=[{id:'t1',cat:'c1',text:'Fontanero',done:false,created:1},{id:'t2',cat:'c1',text:'Ya',done:true,created:2}];
+chk('tareas agrupadas por categoría', taskGroups().length===1&&taskGroups()[0].list.length===2);
+chk('pendientes primero', taskGroups()[0].list[0].id==='t1');
+data.marks=[];data.markDays={};data.tasks=[];
 try{viewHoy(); chk('viewHoy ok',true);}catch(e){chk('viewHoy '+e.message,false)}
 print(fails?('FALLOS4: '+fails):'TODO OK 4');
+})();
+;(function(){
+let fails=0; const chk=(n,c)=>{if(!c)fails++;print((c?'OK  ':'FAIL')+' '+n);};
+// las hojas nuevas se pintan sin reventar
+state.taskEdit={id:null,text:'',cat:'c1'}; state.sheet='task';
+try{renderSheet(); chk('hoja tarea',true);}catch(e){chk('hoja tarea '+e.message,false)}
+state.catEdit={kind:'mark',id:null,name:'',color:'#333',icon:''}; state.sheet='cat';
+try{renderSheet(); chk('hoja marca',true);}catch(e){chk('hoja marca '+e.message,false)}
+state.sheet=null; renderSheet();
+for(const v of ['hoy','tareas','registros','stats','ajustes']){ state.view=v; try{render(); chk('render '+v,true);}catch(e){chk('render '+v+' '+e.message,false)} }
+state.view='hoy';
+print('FALLOS5: '+fails);
 })();

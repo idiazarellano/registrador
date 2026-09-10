@@ -4,6 +4,7 @@ var localStorage={getItem:k=>(k in storeMap?storeMap[k]:null),setItem:(k,v)=>{st
 var sessionStorage={clear(){}};
 var el=()=>({innerHTML:'',textContent:'',style:{},classList:{add(){},remove(){},toggle(){}},setAttribute(){},focus(){},querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){},appendChild(){},remove(){},click(){},dataset:{}});
 var document={addEventListener(){},querySelector:()=>el(),querySelectorAll:()=>[],getElementById:()=>el(),createElement:()=>el(),body:el(),documentElement:el(),hidden:false};
+var history={pushState(){},back(){}};
 var window={addEventListener(){},matchMedia:()=>({matches:false,addEventListener(){}}),scrollTo(){}};
 var navigator={storage:{persist:()=>Promise.resolve(true)}};
 var location={protocol:'file:',reload(){print('RELOAD')}};

@@ -2,6 +2,22 @@
 
 Aplicación web de un solo archivo (`index.html`) para registrar en qué dedicas tu tiempo cada día.
 
+## Pantallas
+
+- **Hoy**: lo que está en marcha, las categorías, las marcas del día y los registros de hoy.
+- **Tareas**: recordatorios agrupados por categoría, en listas desplegables.
+- **Registros**: elegir un día y editarlo (barra, totales, huecos, marcas, día de descanso).
+- **Datos**: estadísticas de días completos: por categoría, medias, comparación con el periodo anterior, marcas y día a día.
+- **Ajustes**: el engranaje de la esquina superior derecha (ya no ocupa pestaña).
+
+## Marcas (eventos de sí o no)
+
+Cosas que un día se hacen o no, sin horas ni duración: «he leído», «he tomado la pastilla». Se crean en Hoy o en Ajustes → Marcas, se activan tocándolas (en Hoy para hoy, en Registros para el día elegido) y se editan con una pulsación larga. En Datos aparecen los días marcados del periodo y la racha en marcha.
+
+## Tareas
+
+Recordatorios sueltos colgados de una categoría, sin fechas ni prioridades. Cada grupo se pliega y despliega. El botón ▶ de una tarea empieza a contar esa categoría. «Borrar las hechas» las elimina de golpe.
+
 ## Archivos
 
 - `index.html`: toda la aplicación.
@@ -50,7 +66,7 @@ GitHub Pages tarda uno o dos minutos en servir la versión nueva. En el móvil, 
 
 ## Borrar datos (Ajustes → Datos → Zona peligrosa)
 
-- **Borrar todos los registros**: hay que escribir el número de registros; antes se descarga una copia (sin ella no se borra) y lo borrado va a una papelera interna (`registrador.v1.trash`) durante 30 días, con un botón "Deshacer el borrado" en Datos.
+- **Borrar todos los registros**: hay que escribir el número de registros; antes se descarga una copia (sin ella no se borra) y lo borrado va a una papelera interna (`registrador.v1.trash`) durante 30 días, con un botón "Deshacer el borrado" en Ajustes → Datos. Se llevan también los días de descanso y los días marcados; categorías, marcas y tareas se conservan.
 - **Borrar todo definitivamente**: solo aparece mientras la papelera tiene contenido. Escribiendo BORRAR elimina del navegador todas las claves `registrador.*` (datos, categorías, ajustes, copias internas y papelera). Los JSON descargados no se tocan.
 
 ## Insertar un registro donde no hay hueco
@@ -58,6 +74,10 @@ GitHub Pages tarda uno o dos minutos en servir la versión nueva. En el móvil, 
 En la lista de registros, entre dos registros seguidos aparece un círculo "+". Abre el editor con un registro nuevo de duración cero en esa unión; con −X en el inicio o +X en el fin se le da duración, y la línea "Al guardar: …" muestra cómo cambian los demás.
 
 Regla de la inserción: los dos vecinos se ajustan al nuevo registro (se acortan o se alargan) para que ningún minuto quede sin dueño. Si el nuevo ocupa 08:45–08:55 en la unión de las 09:00, el anterior acaba a las 08:45 y el siguiente empieza a las 08:55. Solo se alarga un vecino si no hay otro registro entre medias. Las ediciones normales siguen igual: recortan a los vecinos pero nunca los alargan, así que pueden dejar hueco a propósito.
+
+## Qué días cuentan en las estadísticas
+
+La pantalla **Datos** usa solo días completos: N días terminando **ayer**. El día en curso queda fuera, porque va a medias y falsearía las medias y la comparación con el periodo anterior. En **Registros** sí se ve el día de hoy.
 
 ## Tiempo sin registrar
 
@@ -67,10 +87,13 @@ Bajo la barra del día seleccionado en Registros y en Totales · N días aparece
 
 ```json
 {
-  "schema": 2,
+  "schema": 3,
   "categories": [{"id": "c1", "name": "Trabajo", "color": "#2a78d6"}],
   "entries": [{"id": "abc", "cat": "c1", "start": 1757059200000, "end": 1757062800000}],
   "restDays": ["2026-09-06"],
+  "marks": [{"id": "m1", "name": "He leído", "color": "#3fa34d", "icon": "📖"}],
+  "markDays": {"2026-09-06": ["m1"]},
+  "tasks": [{"id": "t1", "cat": "c1", "text": "Llamar al fontanero", "done": false, "created": 0, "doneAt": 0}],
   "settings": {"backupMode": "auto", "theme": "system", "granularity": 5},
   "meta": {"created": 0, "updated": 0, "lastBackup": 0, "lastBackupUpdated": 0}
 }

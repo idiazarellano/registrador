@@ -58,7 +58,30 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .tabs button{flex:1;padding:10px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--ink-3)}
 .tabs button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tabs button[aria-current="page"]{color:var(--accent)}
-.topbar{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.iconbtn{width:36px;height:36px;flex:none;border-radius:10px;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:20px;font-weight:800}
+.iconbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* Marcas: eventos de sí/no del día. */
+.marks{display:flex;flex-wrap:wrap;gap:8px}
+.markchip{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;background:var(--surface);border:2px solid var(--line);font-size:13px;font-weight:700;color:var(--ink-2)}
+.markchip.on{border-color:var(--mc);background:color-mix(in srgb, var(--mc) 14%, var(--surface));color:var(--ink)}
+.markchip.on::before{content:'✓';font-weight:900;color:var(--mc)}
+/* Tareas: listas desplegables por categoría. */
+.taskgroup{padding-top:6px;padding-bottom:6px}
+.grouphead{display:flex;align-items:center;gap:10px;width:100%;padding:8px 0;text-align:left;font-weight:700}
+.grouphead .count{min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+.grouphead .chev{color:var(--ink-3)}
+.tasks{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.task{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.task:last-child{border-bottom:0}
+.tcheck{width:26px;height:26px;flex:none;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:15px;font-weight:900;color:var(--accent);line-height:1}
+.task.done .tcheck{border-color:var(--accent);background:var(--accent-soft)}
+.task .ttext{flex:1;min-width:0;text-align:left;font-size:14px;padding:4px 0}
+.task.done .ttext{text-decoration:line-through;color:var(--ink-3)}
+.tplay{width:32px;height:32px;flex:none;border-radius:9px;background:var(--surface-2);color:var(--ink-2);font-size:12px}
+.delta{font-weight:700}
+.delta.up,.delta.down{color:var(--ink-2)}
+.delta.flat{color:var(--ink-3)}
 .topbar h1{font-size:22px;font-weight:800;letter-spacing:-.01em}
 .topbar .sub{color:var(--ink-2);font-size:13px}
 .card{background:var(--surface);border-radius:var(--r);padding:14px 16px}
@@ -87,10 +110,10 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .gaphint.armed{background:var(--accent-soft);margin:0 -16px -14px;padding:12px 16px;border-radius:0 0 var(--r) var(--r);flex-direction:row;align-items:center}
 .gaphint .row{gap:8px}
 .adjust{display:flex;flex-direction:column;gap:6px}
-.adjust-row{display:grid;grid-template-columns:repeat(3,1fr) minmax(74px,auto) repeat(3,1fr);gap:4px;align-items:center}
-.adjust-row button{height:38px;border-radius:9px;background:var(--surface-2);font-weight:700;font-size:13px}
+.adjust-row{display:flex;gap:4px;align-items:center}
+.adjust-row button{flex:1;min-width:0;height:38px;border-radius:9px;background:var(--surface-2);font-weight:700;font-size:13px}
 .adjust-row button:active{background:var(--surface-3)}
-.adjust-row .val{text-align:center;font-size:17px;font-weight:600}
+.adjust-row .val{flex:1.6;min-width:74px;text-align:center;font-size:17px;font-weight:600}
 .adjust-row .val input{width:100%;text-align:center;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:6px 2px;font-family:var(--mono);font-size:16px}
 .adjust .hint{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-2);gap:8px;flex-wrap:wrap}
 .linkbtn{color:var(--accent);font-weight:700;font-size:12px;padding:6px 0}
@@ -111,7 +134,7 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .icon.big{width:38px;height:38px;font-size:20px;border-radius:11px}
 .seglabel{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.5);pointer-events:none;overflow:hidden}
 .iconpick{display:flex;flex-wrap:wrap;gap:4px}
-.iconscroll{max-height:200px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:8px;overscroll-behavior:contain}
+.iconscroll{max-height:170px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:8px;overscroll-behavior:contain}
 .iconpick button{width:38px;height:38px;border-radius:9px;background:var(--surface-2);font-size:18px;border:2px solid transparent}
 .iconpick button.on{border-color:var(--ink)}
 .chip .name{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -150,6 +173,17 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .sheet h2{font-size:17px;font-weight:800}
 .sheet-head{display:flex;justify-content:space-between;align-items:center}
 .field{display:flex;flex-direction:column;gap:8px}
+/* Editor de registro: inicio a la izquierda, fin a la derecha, duración en medio. */
+.startend{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start}
+.se{display:flex;flex-direction:column;gap:6px;min-width:0}
+.se .label{text-align:center}
+.se input[type=time]{width:100%;text-align:center;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:8px 2px;font-family:var(--mono);font-size:17px}
+.se-adj{display:flex;gap:4px}
+.se-adj button{flex:1;min-width:0;height:36px;border-radius:9px;background:var(--surface-2);font-weight:700;font-size:12px}
+.se-adj button:active{background:var(--surface-3)}
+.se .linkbtn{font-size:11px;line-height:1.3;text-align:center}
+.se .runline{font-size:12px;color:var(--ink-2);text-align:center;padding:9px 0}
+.se-arrow{align-self:center;padding-top:24px;color:var(--ink-3);font-size:15px}
 .catpick{display:flex;flex-wrap:wrap;gap:6px}
 .catpick button{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:var(--surface-2);font-weight:700;font-size:13px;border:2px solid transparent}
 .catpick button.on{border-color:var(--ink)}
@@ -158,6 +192,10 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .row.end{justify-content:flex-end}
 .row.spread{justify-content:space-between}
 .durline{font-size:13px;color:var(--ink-2)}
+/* Fila de botones siempre visible al pie de una hoja: sticky con `bottom` negativo
+   para comerse el padding inferior de .sheet y quedar pegada al borde. */
+.sheet-actions{position:sticky;bottom:calc(-20px - env(safe-area-inset-bottom));z-index:1;display:flex;gap:8px;padding:10px 0 calc(10px + env(safe-area-inset-bottom));margin:0 0 calc(-20px - env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line)}
+.sheet-actions .btn{flex:1;padding-left:2px;padding-right:2px;white-space:nowrap}
 .swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
 .swatches button{aspect-ratio:1;border-radius:50%;border:3px solid transparent}
 .swatches button.on{border-color:var(--ink)}
@@ -235,7 +273,7 @@ const KEY_SNAP='registrador.v1.snap.';  // copias internas diarias: KEY_SNAP+'AA
 const SNAP_DAYS=7;
 const KEY_TRASH='registrador.v1.trash'; // papelera tras 'Borrar todos los registros' (30 días)
 const TRASH_DAYS=30;
-const SCHEMA=2;
+const SCHEMA=3;
 const MIN=60000, HOUR=3600000, DAY=86400000;
 // 4 filas × 8 tonos (rojo→rosa): vivos, oscuros, suaves, neutros/tierra
 const PALETTE=[
@@ -273,6 +311,9 @@ function defaultData(){
       {id:'c8',name:'Sueño',color:'#6b7280',icon:'😴'}],
     entries:[],
     restDays:[],
+    marks:[],      // eventos de sí/no: {id,name,icon,color,archived}
+    markDays:{},   // 'AAAA-MM-DD' -> [id de marca]
+    tasks:[],      // recordatorios: {id,cat,text,done,created,doneAt}
     settings:{backupMode:'auto',theme:'system',granularity:5},
     meta:{created:Date.now(),updated:Date.now(),lastBackup:0,lastBackupUpdated:0}};
 }
@@ -282,6 +323,9 @@ function migrate(d){
   d.categories=Array.isArray(d.categories)?d.categories:[];
   d.entries=Array.isArray(d.entries)?d.entries:[];
   d.restDays=Array.isArray(d.restDays)?d.restDays:[];
+  d.marks=Array.isArray(d.marks)?d.marks:[];
+  d.markDays=(d.markDays&&typeof d.markDays==='object')?d.markDays:{};
+  d.tasks=Array.isArray(d.tasks)?d.tasks:[];
   d.settings=Object.assign({backupMode:'auto',theme:'system',granularity:5},d.settings||{});
   for(const c of d.categories){ if(c.icon==null) c.icon=''; if(c.archived==null) c.archived=false; }
   d.meta=Object.assign({created:Date.now(),updated:0,lastBackup:0,lastBackupUpdated:0},d.meta||{});
@@ -289,7 +333,8 @@ function migrate(d){
     if('autoBackup' in d.settings){ d.settings.backupMode=d.settings.autoBackup===false?'off':'auto'; delete d.settings.autoBackup; }
     d.schema=2; }
   if(!['auto','ask','off'].includes(d.settings.backupMode)) d.settings.backupMode='auto';
-  // futuras versiones: if(d.schema<3){ ... d.schema=3; }
+  if(d.schema<3){ d.schema=3; } // v3: marcas (eventos sí/no) y tareas; campos nuevos, nada que convertir
+  // futuras versiones: if(d.schema<4){ ... d.schema=4; }
   d.schema=SCHEMA;
   return d;
 }
@@ -467,15 +512,16 @@ function backupPending(){
 function autoBackupIfDue(){ if(data.settings.backupMode==='auto'&&backupPending()&&!state.sheet) doBackup(true); }
 /* Borrado de registros con red de seguridad: copia descargada + papelera interna. */
 function wipeEntries(){
-  try{localStorage.setItem(KEY_TRASH,JSON.stringify({date:Date.now(),entries:data.entries,restDays:data.restDays}));}
+  try{localStorage.setItem(KEY_TRASH,JSON.stringify({date:Date.now(),entries:data.entries,restDays:data.restDays,markDays:data.markDays}));}
   catch(e){toast('No se pudo guardar la papelera: '+e.message);return false;}
-  data.entries=[]; data.restDays=[]; save(); return true;
+  data.entries=[]; data.restDays=[]; data.markDays={}; save(); return true;
 }
 function undoWipe(){
   const t=trash(); if(!t){toast('La papelera está vacía');return;}
   const ids=new Set(data.entries.map(e=>e.id)); let n=0;
   for(const e of t.entries) if(!ids.has(e.id)){data.entries.push(e);n++;}
   for(const k of t.restDays||[]) if(!data.restDays.includes(k)) data.restDays.push(k);
+  for(const k of Object.keys(t.markDays||{})) if(!data.markDays[k]) data.markDays[k]=t.markDays[k];
   sortEntries(); save(); localStorage.removeItem(KEY_TRASH); render(); toast('Recuperados '+n+' registros');
 }
 function nukeEverything(){
@@ -499,7 +545,7 @@ function importJSON(text,mode){
 }
 
 /* ============ Interfaz ============ */
-const state={view:'hoy',range:7,startFrom:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null};
+const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[]};
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let toastTimer;
@@ -510,12 +556,15 @@ function applyTheme(){const t=data.settings.theme; if(t==='system') document.doc
 const ICONS={
   hoy:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   registros:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>',
+  tareas:'<svg viewBox="0 0 24 24"><path d="M4 7.5l2 2 3.5-3.5M13 8h7M4 16.5l2 2 3.5-3.5M13 17h7"/></svg>',
+  stats:'<svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>',
   ajustes:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
 };
 function renderTabs(){
-  $('#tabs').innerHTML=[['hoy','Hoy'],['registros','Registros'],['ajustes','Ajustes']].map(([k,l])=>
+  $('#tabs').innerHTML=[['hoy','Hoy'],['tareas','Tareas'],['registros','Registros'],['stats','Datos']].map(([k,l])=>
     `<button data-view="${k}" ${state.view===k?'aria-current="page"':''}>${ICONS[k]}<span>${l}</span></button>`).join('');
 }
+const gearBtn=`<button class="iconbtn" data-view="ajustes" aria-label="Ajustes">${ICONS.ajustes}</button>`;
 function iconOrDot(c,big){
   return c.icon?`<span class="icon ${big?'big':''}" style="background:${c.color}">${c.icon}</span>`:`<span class="dot ${big?'':''}" style="background:${c.color}"></span>`;
 }
@@ -577,6 +626,68 @@ function dayTotalsHTML(ds){
 }
 function todayTotals(ds){const m=new Map();for(const s of segmentsOfDay(ds)) m.set(s.e.cat,(m.get(s.e.cat)||0)+s.ms);return m;}
 
+/* ============ Marcas (eventos de sí/no) ============
+   Una marca es solo eso: hoy sí o hoy no. Sin horas ni duración, para no confundirlas
+   con las categorías. Se guardan por día en data.markDays. */
+function activeMarks(){return data.marks.filter(m=>!m.archived);}
+function markById(id){return data.marks.find(m=>m.id===id)||{name:'?',color:'#888',icon:''};}
+function isMarked(id,ds){return (data.markDays[dayKey(ds)]||[]).includes(id);}
+function toggleMark(id,ds){
+  const k=dayKey(ds), list=data.markDays[k]||[];
+  if(list.includes(id)){const r=list.filter(x=>x!==id); if(r.length) data.markDays[k]=r; else delete data.markDays[k];}
+  else data.markDays[k]=list.concat(id);
+  save();
+}
+function marksRowHTML(ds){
+  const ms=activeMarks(); if(!ms.length) return '';
+  return `<div class="marks">${ms.map(m=>`<button class="markchip ${isMarked(m.id,ds)?'on':''}" data-mark="${m.id}" data-markday="${ds}" aria-pressed="${isMarked(m.id,ds)}" style="--mc:${m.color}">${m.icon?m.icon+' ':''}${esc(m.name)}</button>`).join('')}</div>`;
+}
+function markStreak(id){ // días seguidos marcados terminando hoy (o ayer, si hoy aún no)
+  let d=dayStart(Date.now()), n=0;
+  if(!isMarked(id,d)) d-=DAY;
+  while(isMarked(id,dayStart(d+HOUR*12))){n++;d-=DAY;}
+  return n;
+}
+function statsMarksHTML(days){
+  const ms=activeMarks(); if(!ms.length) return '';
+  return `<section class="card"><div class="section-head"><h2>Marcas</h2><span class="label">${days.length} días</span></div>
+    <div class="list" style="margin-top:4px">${ms.map(m=>{
+      const n=days.filter(ds=>isMarked(m.id,ds)).length, st=markStreak(m.id);
+      return `<div><span class="grow">${m.icon?m.icon+' ':''}${esc(m.name)}<br><span class="desc">${st?`racha de ${st} ${st===1?'día':'días'}`:'sin racha en marcha'}</span></span><span class="num" style="font-weight:800">${n}/${days.length}</span></div>`;
+    }).join('')}</div></section>`;
+}
+
+/* ============ Tareas ============
+   Recordatorios sueltos colgados de una categoría. Ni fechas ni prioridades: si hace falta
+   más que esto, la herramienta correcta es otra aplicación. */
+function taskGroups(){
+  const byCat=new Map();
+  for(const t of data.tasks){ if(!byCat.has(t.cat)) byCat.set(t.cat,[]); byCat.get(t.cat).push(t); }
+  const order=data.categories.map(c=>c.id).filter(id=>byCat.has(id));
+  for(const id of byCat.keys()) if(!order.includes(id)) order.push(id);
+  return order.map(id=>({c:catById(id),list:byCat.get(id).sort((a,b)=>(a.done?1:0)-(b.done?1:0)||b.created-a.created)}));
+}
+function viewTareas(){
+  const groups=taskGroups(), doneN=data.tasks.filter(t=>t.done).length;
+  const pend=data.tasks.filter(t=>!t.done).length;
+  return `<div class="topbar"><h1>Tareas</h1>${gearBtn}</div>
+    <p class="sub" style="font-size:13px;color:var(--ink-2);margin:0 2px">${pend?`${pend} ${pend===1?'pendiente':'pendientes'}`:'Nada pendiente.'}</p>
+    <button class="btn primary" data-act="new-task">+ Nueva tarea</button>
+    ${groups.length?groups.map(g=>{
+      const closed=state.taskClosed.includes(g.c.id), np=g.list.filter(t=>!t.done).length;
+      return `<section class="card taskgroup">
+        <button class="grouphead" data-tgroup="${g.c.id}" aria-expanded="${!closed}">
+          ${iconOrDot(g.c)}<span class="grow">${esc(g.c.name)}</span>
+          <span class="count num">${np||'✓'}</span><span class="chev">${closed?'▸':'▾'}</span></button>
+        ${closed?'':`<div class="tasks">${g.list.map(t=>`<div class="task ${t.done?'done':''}">
+          <button class="tcheck" data-tdone="${t.id}" aria-pressed="${!!t.done}" aria-label="Hecha">${t.done?'✓':''}</button>
+          <button class="grow ttext" data-task="${t.id}">${esc(t.text)}</button>
+          ${t.done?'':`<button class="tplay" data-start="${g.c.id}" aria-label="Empezar a contar ${esc(g.c.name)}">▶</button>`}
+        </div>`).join('')}</div>`}
+      </section>`;}).join(''):'<p class="empty">Sin tareas. Sirven de recordatorio: «llamar al fontanero», y ya.</p>'}
+    ${doneN?`<div class="row end"><button class="linkbtn danger" data-act="tasks-clear">Borrar las ${doneN} hechas</button></div>`:''}`;
+}
+
 function viewHoy(){
   const ds=dayStart(Date.now()), r=running(), tot=todayTotals(ds);
   let total=0; tot.forEach(v=>total+=v);
@@ -603,63 +714,100 @@ function viewHoy(){
         return `<div class="gaphint"><span class="grow">Desde ${when} hay <strong class="num">${fmtDur(gap)}</strong> sin registrar.</span>
           <span class="row"><button class="btn sm" data-gap-start="${last.end}" data-gap-end="${roundTo(Date.now())}">Rellenar</button>${gap<HOUR?`<button class="btn sm primary" data-act="startfrom" data-ms="${last.end}">Seguir desde las ${fmtTime(last.end)}</button>`:''}</span></div>`;})()}
    </div>`;
-  return `<div class="topbar"><h1>${fmtDayLong(ds)}</h1><span class="row" style="gap:8px;align-items:baseline"><span class="sub num">${total?fmtDur(total)+' registradas':''}</span>${restBtn(ds)}</span></div>
+  return `<div class="topbar"><h1>${fmtDayLong(ds)}</h1><span class="row" style="gap:8px;align-items:center"><span class="sub num">${total?fmtDur(total)+' registradas':''}</span>${restBtn(ds)}${gearBtn}</span></div>
     ${banner}
     <div>${dayBarHTML(ds)}</div>
     ${nowPanel}
     <div class="section-head"><h2>Categorías</h2><button class="linkbtn" data-act="edit-cats">Editar</button></div>
     <div class="catgrid">${activeCats().map(c=>`<button class="chip ${r&&r.cat===c.id?'on':''}" data-start="${c.id}">${iconOrDot(c)}<span class="name">${esc(c.name)}</span>${tot.get(c.id)?`<span class="tot num">${fmtDur(tot.get(c.id))}</span>`:''}</button>`).join('')}
       <button class="chip add" data-act="new-cat">+ Categoría</button></div>
+    <div class="section-head"><h2>Marcas</h2><button class="linkbtn" data-act="new-mark">+ Marca</button></div>
+    ${activeMarks().length?marksRowHTML(ds):'<p class="empty" style="margin:0">Cosas de sí o no: «he leído», «he tomado la pastilla». Sin horas.</p>'}
     <div class="section-head"><h2>Registros de hoy</h2><button class="linkbtn" data-act="manual">+ Añadir a mano</button></div>
     ${entriesListHTML(ds,!isRest(ds))}`;
 }
 
+/* Registros: navegar por los días y editarlos. Las estadísticas viven aparte. */
 function viewRegistros(){
-  const today=dayStart(Date.now());
-  const n=state.range;
-  const days=[];for(let i=0;i<n;i++){days.push(dayStart(today-i*DAY+HOUR*12));}
-  // totales
-  const tot=new Map();let sum=0;
-  for(const ds of days){for(const s of segmentsOfDay(ds)){tot.set(s.e.cat,(tot.get(s.e.cat)||0)+s.ms);sum+=s.ms;}}
-  const rows=[...tot.entries()].map(([id,ms])=>({c:catById(id),ms})).sort((a,b)=>b.ms-a.ms);
-  const max=rows.length?rows[0].ms:1;
-  const workDays=days.filter(ds=>!isRest(ds)&&segmentsOfDay(ds).length);
-  const restCount=days.filter(isRest).length;
-  let workSum=0;for(const ds of workDays)for(const s of segmentsOfDay(ds))workSum+=s.ms;
-  return `<div class="topbar"><h1>Registros</h1></div>
-    <div class="seg-control">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${state.range===k}">${k} días</button>`).join('')}</div>
+  const today=dayStart(Date.now()), sel=state.selDay;
+  // La tira muestra 14 días; si el día elegido queda fuera, se desplaza para incluirlo.
+  const stripEnd = sel>today-13*DAY ? today : dayStart(Math.min(today,sel+6*DAY)+HOUR*12);
+  const days=[];for(let i=0;i<14;i++){days.push(dayStart(stripEnd-i*DAY+HOUR*12));}
+  const shown=new Set();for(const ds of days)for(const g of segmentsOfDay(ds))shown.add(g.e.cat);
+  return `<div class="topbar"><h1>Registros</h1>${gearBtn}</div>
     <section class="card">
-      <div class="section-head"><h2>Día a día</h2><span class="label">0 → 24 h</span></div>
+      <div class="section-head"><h2>Elige un día</h2><span class="label">0 → 24 h</span></div>
       <div class="dayrows" style="margin-top:10px">${days.map(ds=>{
-        let t=0;for(const s of segmentsOfDay(ds))t+=s.ms;const d=new Date(ds);
+        let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
         return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''}" data-day="${ds}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span><span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
       <div class="ticks" style="padding-left:66px;padding-right:62px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
-      <div class="legend" style="margin-top:10px">${data.categories.filter(c=>tot.has(c.id)).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>
+      <div class="legend" style="margin-top:10px">${data.categories.filter(c=>shown.has(c.id)).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>
     </section>
     <section class="card">
       <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><span class="row" style="gap:8px;align-items:center;justify-content:center;flex:1"><h2 style="font-size:14px;font-weight:800">${fmtDayLong(state.selDay)}</h2>${restBtn(state.selDay)}</span><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
       <div style="margin:10px 0 12px">${dayBarHTML(state.selDay)}${dayTotalsHTML(state.selDay)}</div>
+      ${activeMarks().length?`<div class="section-head" style="margin-bottom:8px"><h2>Marcas</h2></div>${marksRowHTML(state.selDay)}`:''}
       ${entriesListHTML(state.selDay,!isRest(state.selDay))}
       <div class="row end" style="margin-top:10px"><button class="linkbtn" data-act="manual-day">+ Añadir registro este día</button></div>
-    </section>
+    </section>`;
+}
+
+/* Estadísticas: solo días completos (hoy va a medias y falsearía medias y comparaciones). */
+function periodTotals(list){
+  const m=new Map(); let s=0;
+  for(const ds of list) for(const g of segmentsOfDay(ds)){ m.set(g.e.cat,(m.get(g.e.cat)||0)+g.ms); s+=g.ms; }
+  return {m,s};
+}
+function deltaHTML(now,before){
+  if(!before) return '';
+  const d=now-before; if(Math.abs(d)<10*MIN) return `<span class="delta flat">≈ igual</span>`;
+  return `<span class="delta ${d>0?'up':'down'}">${d>0?'▲':'▼'} ${fmtDur(Math.abs(d))}</span>`;
+}
+function viewStats(){
+  const today=dayStart(Date.now()), n=state.range;
+  const statDays=[], prevDays=[];
+  for(let i=1;i<=n;i++) statDays.push(dayStart(today-i*DAY+HOUR*12));
+  for(let i=n+1;i<=2*n;i++) prevDays.push(dayStart(today-i*DAY+HOUR*12));
+  const cur=periodTotals(statDays), prev=periodTotals(prevDays);
+  const rows=[...cur.m.entries()].map(([id,ms])=>({c:catById(id),ms,prev:prev.m.get(id)||0})).sort((a,b)=>b.ms-a.ms);
+  const max=rows.length?rows[0].ms:1;
+  const workDays=statDays.filter(ds=>!isRest(ds)&&segmentsOfDay(ds).length);
+  const restCount=statDays.filter(isRest).length;
+  let workSum=0;for(const ds of workDays)for(const g of segmentsOfDay(ds))workSum+=g.ms;
+  const perCat=(id,list)=>{let w=0;for(const ds of list)for(const g of segmentsOfDay(ds))if(g.e.cat===id)w+=g.ms;return w;};
+  return `<div class="topbar"><h1>Datos</h1>${gearBtn}</div>
+    <div class="seg-control">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${state.range===k}">${k} días</button>`).join('')}</div>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin:8px 2px 0">${fmtDayLong(statDays[n-1])} → ${fmtDayLong(statDays[0])}. Hoy no cuenta hasta que termine.</p>
     <section class="card">
-      <div class="section-head"><h2>Totales · ${n} días</h2><span class="sub num" style="font-size:12px;color:var(--ink-2)">${fmtDur(sum)} en total</span></div>
+      <div class="section-head"><h2>Por categoría</h2><span class="sub num" style="font-size:12px;color:var(--ink-2)">${fmtDur(cur.s)} en total</span></div>
       <div class="totals" style="margin-top:12px">${rows.length?rows.map(r=>`<div class="trow">
         <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
-        <span class="v num">${fmtDur(r.ms)} · ${Math.round(r.ms/sum*100)} %</span>
+        <span class="v num">${fmtDur(r.ms)} · ${Math.round(r.ms/cur.s*100)} %</span>
         <span class="bar"><i style="width:${r.ms/max*100}%;background:${r.c.color}"></i></span>
-        <span class="sub num">${(()=>{let w=0;for(const ds of workDays)for(const s of segmentsOfDay(ds))if(s.e.cat===r.c.id)w+=s.ms;return workDays.length&&w?`media ${fmtDur(w/workDays.length)} por día${restCount?' (sin contar los de descanso)':' con registros'}`:'solo en días de descanso';})()}</span></div>`).join('')+unassignedRowHTML(days.reduce((a,ds)=>a+unassignedOfDay(ds),0),sum):'<p class="empty">Sin registros en este periodo.</p>'}
-      ${restCount?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:12px">🌴 ${restCount} ${restCount===1?'día de descanso':'días de descanso'} en el periodo, con ${fmtDur(sum-workSum)} registradas. Las medias se calculan sobre los ${workDays.length} días restantes con registros.</p>`:''}</div>
+        <span class="sub num">${workDays.length&&perCat(r.c.id,workDays)?`media ${fmtDur(perCat(r.c.id,workDays)/workDays.length)} por día`:'solo en días de descanso'}${prev.s?' · ':''}${prev.s?deltaHTML(r.ms,r.prev):''}</span></div>`).join('')+unassignedRowHTML(statDays.reduce((a,ds)=>a+unassignedOfDay(ds),0),cur.s):'<p class="empty">Sin registros en este periodo.</p>'}
+      ${restCount?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:12px">🌴 ${restCount} ${restCount===1?'día de descanso':'días de descanso'}, con ${fmtDur(cur.s-workSum)} registradas. Las medias se calculan sobre los ${workDays.length} días restantes con registros.</p>`:''}
+      ${prev.s?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:8px">▲▼ comparado con los ${n} días anteriores (${fmtDur(prev.s)} en total).</p>`:''}</div>
+    </section>
+    ${statsMarksHTML(statDays)}
+    <section class="card">
+      <div class="section-head"><h2>Día a día</h2><span class="label">horas registradas</span></div>
+      <div class="dayrows" style="margin-top:10px">${statDays.slice().reverse().map(ds=>{
+        let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
+        return `<button class="dayrow ${isRest(ds)?'rest':''}" data-day="${ds}" data-goto="registros"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span><span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
     </section>`;
 }
 
 function viewAjustes(){
   const s=data.settings;
-  return `<div class="topbar"><h1>Ajustes</h1></div>
+  return `<div class="topbar"><button class="iconbtn" data-view="${state.prevView}" aria-label="Volver">‹</button><h1>Ajustes</h1></div>
     <section class="card"><div class="label" style="margin-bottom:6px">Categorías</div>
       <div class="list">${activeCats().map((c,i,arr)=>`<div class="catrow"><button data-cat="${c.id}" class="grow">${iconOrDot(c)}<span class="grow">${esc(c.name)}</span></button><button class="mv" data-move="${c.id}" data-dir="-1" aria-label="Subir" ${i===0?'disabled':''}>▲</button><button class="mv" data-move="${c.id}" data-dir="1" aria-label="Bajar" ${i===arr.length-1?'disabled':''}>▼</button></div>`).join('')}
       <button data-act="new-cat"><span class="dot" style="border:2px dashed var(--line)"></span><span class="grow" style="color:var(--accent);font-weight:700">Nueva categoría</span></button></div>
       ${data.categories.some(c=>c.archived)?`<div class="label" style="margin:14px 0 6px">Archivadas</div><div class="list">${data.categories.filter(c=>c.archived).map(c=>`<div class="catrow"><button data-cat="${c.id}" class="grow" style="opacity:.7">${iconOrDot(c)}<span class="grow">${esc(c.name)}</span></button><button class="linkbtn" data-unarchive="${c.id}">Restaurar</button></div>`).join('')}</div>`:''}</section>
+    <section class="card"><div class="label" style="margin-bottom:6px">Marcas</div>
+      <p class="desc" style="margin:0 0 6px;font-size:12px;color:var(--ink-3)">Eventos de sí o no, uno por día. Aparecen en Hoy debajo de las categorías.</p>
+      <div class="list">${data.marks.map(m=>`<div class="catrow"><button data-markedit="${m.id}" class="grow">${m.icon?`<span class="icon" style="background:${m.color}">${m.icon}</span>`:`<span class="dot" style="background:${m.color}"></span>`}<span class="grow">${esc(m.name)}</span></button></div>`).join('')}
+      <button data-act="new-mark"><span class="dot" style="border:2px dashed var(--line)"></span><span class="grow" style="color:var(--accent);font-weight:700">Nueva marca</span></button></div></section>
     <section class="card"><div class="label" style="margin-bottom:6px">Copia de seguridad</div>
       <div class="label" style="margin-bottom:6px;color:var(--ink-3)">Copia diaria</div>
       <div class="seg-control">${[['auto','Automática'],['ask','Avisar'],['off','No']].map(([k,l])=>`<button data-bmode="${k}" aria-pressed="${s.backupMode===k}">${l}</button>`).join('')}</div>
@@ -689,7 +837,7 @@ function viewAjustes(){
 function render(){
   applyTheme();
   const v=$('#view');
-  v.innerHTML=state.view==='hoy'?viewHoy():state.view==='registros'?viewRegistros():viewAjustes();
+  v.innerHTML={hoy:viewHoy,tareas:viewTareas,registros:viewRegistros,stats:viewStats,ajustes:viewAjustes}[state.view]();
   renderTabs(); renderSheet();
 }
 
@@ -743,18 +891,29 @@ function newManualEntry(ds){
   if(prev&&end-endOf(prev)<6*HOUR&&end-endOf(prev)>MIN) start=endOf(prev);
   openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start,end});
 }
+// Dos saltos por lado: el paso configurado y uno grande (el triple, o 5 min si el paso es 1).
 function adjButtons(attr,plus){
-  const steps=STEP()>=5?[5,10,15]:[1,5,10];
+  const steps=[STEP(),STEP()===1?5:STEP()*3];
   const list=plus?steps:steps.slice().reverse();
   return list.map(n=>`<button data-${attr}="${plus?n:-n}">${plus?'+':'−'}${n}</button>`).join('');
 }
-function timeRow(field,ms){
-  return `<div class="adjust-row" data-field="${field}">
-    ${adjButtons('tadj')}
-    <span class="val"><input type="time" step="${STEP()*60}" value="${fmtTime(ms)}" data-tinput="${field}" aria-label="Hora"></span>
-    ${adjButtons('tadj',true)}</div>`;
+function timeCol(field,ms,label,extra){
+  return `<div class="se" data-field="${field}">
+    <div class="label">${label}</div>
+    <input type="time" step="${STEP()*60}" value="${fmtTime(ms)}" data-tinput="${field}" aria-label="${label}">
+    <div class="se-adj">${adjButtons('tadj')}${adjButtons('tadj',true)}</div>
+    ${extra||''}</div>`;
 }
+/* El botón atrás del móvil cierra la hoja abierta: mientras hay hoja, hay una entrada
+   extra en el historial. Cerrarla desde la app la retira con history.back(). */
+let sheetHist=false;
+function syncSheetHistory(){
+  if(state.sheet&&!sheetHist){sheetHist=true;history.pushState({sheet:1},'');}
+  else if(!state.sheet&&sheetHist){sheetHist=false;history.back();}
+}
+window.addEventListener('popstate',()=>{ if(state.sheet){sheetHist=false;closeSheet();} });
 function renderSheet(){
+  syncSheetHistory();
   const o=$('#overlay');
   if(!state.sheet){o.innerHTML='';document.body.style.overflow='';return;}
   document.body.style.overflow='hidden';
@@ -767,29 +926,44 @@ function renderSheet(){
       <div class="sheet-head"><h2>${ed.isNew?'Nuevo registro':'Editar registro'}</h2><span class="sub num" style="color:var(--ink-2);font-size:13px">${fmtDayLong(dayStart(ed.start))}${ed.end!=null&&dayKey(ed.end)!==dayKey(ed.start)?' → '+fmtDayLong(dayStart(ed.end)):''}</span></div>
       <div class="field"><div class="label">Categoría</div><div class="catpick">${data.categories.filter(c=>!c.archived||c.id===ed.cat).map(c=>`<button data-pick="${c.id}" class="${c.id===ed.cat?'on':''}"><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</button>`).join('')}</div></div>
       ${real&&p&&p.cat===ed.cat&&ed.start-endOf(p)<=STEP()*MIN?`<div class="row"><button class="btn sm ghost" data-act="edit-merge-prev">Unir con la anterior (${fmtTime(p.start)}–${fmtTime(endOf(p))})</button></div>`:''}
-      <div class="field"><div class="row spread"><div class="label">Inicio</div>${p&&Math.abs(ed.start-endOf(p))>MIN?`<button class="linkbtn" data-snap="start" data-ms="${endOf(p)}">= fin de la anterior (${fmtTime(endOf(p))})</button>`:''}</div>${timeRow('start',ed.start)}</div>
-      <div class="field"><div class="row spread"><div class="label">Fin${ed.end==null?' · en curso':''}</div>${ed.end!=null&&nx&&Math.abs(nx.start-ed.end)>MIN?`<button class="linkbtn" data-snap="end" data-ms="${nx.start}">= inicio de la siguiente (${fmtTime(nx.start)})</button>`:''}${ed.end==null?`<button class="linkbtn" data-act="edit-stop">Detener ahora</button>`:''}</div>
-        ${ed.end==null?`<div class="durline num">Sigue en marcha desde hace ${fmtDur(Date.now()-ed.start)}.</div>`:timeRow('end',ed.end)}</div>
-      <div class="durline num">${dur<0?'<span style="color:var(--danger)">El fin es anterior al inicio.</span>':dur<MIN?'Usa −X en el inicio o +X en el fin.':'Duración: '+fmtDur(dur,true)}</div>
+      <div class="startend">
+        ${timeCol('start',ed.start,'Inicio',p&&Math.abs(ed.start-endOf(p))>MIN?`<button class="linkbtn" data-snap="start" data-ms="${endOf(p)}">= fin de la anterior<br>(${fmtTime(endOf(p))})</button>`:'')}
+        <span class="se-arrow">→</span>
+        ${ed.end==null
+          ?`<div class="se"><div class="label">Fin</div><div class="runline">En marcha</div><button class="linkbtn" data-act="edit-stop">Detener ahora</button></div>`
+          :timeCol('end',ed.end,'Fin',nx&&Math.abs(nx.start-ed.end)>MIN?`<button class="linkbtn" data-snap="end" data-ms="${nx.start}">= inicio de la siguiente<br>(${fmtTime(nx.start)})</button>`:'')}
+      </div>
+      <div class="durline num">${ed.end==null?'Sigue en marcha desde hace '+fmtDur(Date.now()-ed.start)+'.':dur<0?'<span style="color:var(--danger)">El fin es anterior al inicio.</span>':dur<MIN?'Usa −X en el inicio o +X en el fin.':'Duración: '+fmtDur(dur,true)}</div>
       ${(()=>{const pv=overlapPreview(ed);return pv?`<div class="durline" style="color:var(--ink-2)">Al guardar: ${pv}</div>`:'';})()}
       <div class="row spread">
         ${ed.isNew?'<span></span>':`<button class="btn sm danger" data-act="edit-delete">Eliminar</button>`}
         <span class="row"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm primary" data-act="edit-save" ${dur<MIN?'disabled style="opacity:.5"':''}>Guardar</button></span>
       </div></div></div>`;
   } else if(state.sheet==='cat'){
-    const c=state.catEdit;
-    o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Categoría">
-      <div class="handle"></div><h2>${c.id?'Editar categoría':'Nueva categoría'}</h2>
-      <div class="field"><div class="label">Nombre</div><input class="text" id="catName" value="${esc(c.name)}" placeholder="Por ejemplo: Lectura" maxlength="30" autocomplete="off"></div>
+    const c=state.catEdit, isMark=c.kind==='mark';
+    o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="${isMark?'Marca':'Categoría'}">
+      <div class="handle"></div><h2>${c.id?'Editar ':'Nueva '}${isMark?'marca':'categoría'}</h2>
+      <div class="field"><div class="label">Nombre</div><input class="text" id="catName" value="${esc(c.name)}" placeholder="${isMark?'Por ejemplo: He leído':'Por ejemplo: Lectura'}" maxlength="30" autocomplete="off"></div>
       <div class="field"><div class="row spread"><div class="label">Icono (opcional)</div><input class="text" id="catIcon" value="${esc(c.icon||'')}" placeholder="emoji" maxlength="4" style="width:80px;text-align:center" autocomplete="off"></div>
         <div class="iconscroll"><div class="iconpick"><button data-icon="" class="${!c.icon?'on':''}" aria-label="Sin icono">∅</button></div>
         ${ICON_GROUPS.map(([n,list])=>`<div class="label" style="margin:8px 0 4px">${n}</div><div class="iconpick">${list.map(i=>`<button data-icon="${i}" class="${i===c.icon?'on':''}">${i}</button>`).join('')}</div>`).join('')}</div></div>
       <div class="field"><div class="label">Color</div><div class="swatches">${PALETTE.map(h=>`<button data-color="${h}" class="${h===c.color?'on':''}" style="background:${h}" aria-label="${h}"></button>`).join('')}</div></div>
-      <div class="row spread">
-        ${c.id?`<span class="row"><button class="btn sm ghost" data-act="cat-archive">${catById(c.id).archived?'Restaurar':'Archivar'}</button><button class="btn sm danger" data-act="cat-delete">Eliminar</button></span>`:'<span></span>'}
-        <span class="row"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm primary" data-act="cat-save">Guardar</button></span>
+      <div class="sheet-actions">
+        ${c.id?(isMark?`<button class="btn sm danger" data-act="mark-delete">Eliminar</button>`:`<button class="btn sm ghost" data-act="cat-archive">${catById(c.id).archived?'Restaurar':'Archivar'}</button><button class="btn sm danger" data-act="cat-delete">Eliminar</button>`):''}
+        <button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm primary" data-act="cat-save">Guardar</button>
       </div></div></div>`;
     setTimeout(()=>{const i=$('#catName');if(i&&!c.id)i.focus();},50);
+  } else if(state.sheet==='task'){
+    const t=state.taskEdit;
+    o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Tarea">
+      <div class="handle"></div><h2>${t.id?'Editar tarea':'Nueva tarea'}</h2>
+      <div class="field"><div class="label">Recordatorio</div><input class="text" id="taskText" value="${esc(t.text)}" placeholder="Por ejemplo: llamar al fontanero" maxlength="120" autocomplete="off"></div>
+      <div class="field"><div class="label">Categoría</div><div class="catpick">${activeCats().map(c=>`<button data-taskcat="${c.id}" class="${c.id===t.cat?'on':''}"><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</button>`).join('')}</div></div>
+      <div class="sheet-actions">
+        ${t.id?`<button class="btn sm danger" data-act="task-delete">Eliminar</button>`:''}
+        <button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm primary" data-act="task-save">Guardar</button>
+      </div></div></div>`;
+    setTimeout(()=>{const i=$('#taskText');if(i&&!t.id)i.focus();},50);
   } else if(state.sheet==='catdel'){
     const cd=state.catDel, c=catById(cd.id);
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Eliminar categoría">
@@ -809,7 +983,7 @@ function renderSheet(){
     const n=data.entries.length;
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Borrar registros">
       <div class="handle"></div><h2>Borrar todos los registros</h2>
-      <p style="margin:0;color:var(--ink-2);font-size:14px">Se borran <strong>${n}</strong> registros y los días de descanso. Primero se descarga una copia; sin ella no se borra nada. Podrás deshacerlo durante ${TRASH_DAYS} días.</p>
+      <p style="margin:0;color:var(--ink-2);font-size:14px">Se borran <strong>${n}</strong> registros, los días de descanso y los días marcados. Categorías, marcas y tareas se conservan. Primero se descarga una copia; sin ella no se borra nada. Podrás deshacerlo durante ${TRASH_DAYS} días.</p>
       <div class="field"><div class="label">Escribe ${n} para confirmar</div><input class="confirm-input num" id="confirmInput" inputmode="numeric" autocomplete="off" placeholder="${n}"></div>
       <div class="row end"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm danger" data-act="wipe-go" ${n?'':'disabled style="opacity:.5"'}>Guardar copia y borrar</button></div></div></div>`;
     setTimeout(()=>{const i=$('#confirmInput');if(i)i.focus();},50);
@@ -829,14 +1003,21 @@ function renderSheet(){
       <button class="btn ghost" data-close>Cancelar</button></div></div>`;
   }
 }
-function closeSheet(){state.sheet=null;state.editing=null;state.catEdit=null;state.catDel=null;state.resume=null;renderSheet();}
+function closeSheet(){state.sheet=null;state.editing=null;state.catEdit=null;state.catDel=null;state.resume=null;state.taskEdit=null;renderSheet();}
 
 /* ============ Eventos ============ */
 document.addEventListener('click',ev=>{
   const t=ev.target.closest('button,[data-close]'); if(!t) return;
   const d=t.dataset;
   if(t.hasAttribute('data-close')&&t===ev.target||t.matches('button[data-close]')){closeSheet();return;}
-  if(d.view){state.view=d.view;render();return;}
+  if(d.view){ if(d.view!=='ajustes')state.prevView=d.view; state.view=d.view; render(); window.scrollTo(0,0); return;}
+  if(d.goto){state.selDay=dayStart(+d.day);state.prevView=state.view=d.goto;render();window.scrollTo(0,0);return;}
+  if(d.mark&&d.markday){ if(lp.fired){lp.fired=false;return;} toggleMark(d.mark,+d.markday);render();return;}
+  if(d.markedit){const m=markById(d.markedit);state.catEdit={kind:'mark',id:m.id,name:m.name,color:m.color,icon:m.icon||''};state.sheet='cat';renderSheet();return;}
+  if(d.tgroup){state.taskClosed=state.taskClosed.includes(d.tgroup)?state.taskClosed.filter(x=>x!==d.tgroup):state.taskClosed.concat(d.tgroup);render();return;}
+  if(d.tdone){const t=data.tasks.find(x=>x.id===d.tdone);if(t){t.done=!t.done;t.doneAt=t.done?Date.now():0;save();render();}return;}
+  if(d.task){const t=data.tasks.find(x=>x.id===d.task);if(t){state.taskEdit={id:t.id,text:t.text,cat:t.cat};state.sheet='task';renderSheet();}return;}
+  if(d.taskcat){state.taskEdit.cat=d.taskcat;document.querySelectorAll('[data-taskcat]').forEach(b=>b.classList.toggle('on',b.dataset.taskcat===d.taskcat));return;}
   if(d.start){ if(lp.fired){lp.fired=false;return;} startCategory(d.start);return;}
   if(d.edit){const e=data.entries.find(x=>x.id===d.edit);if(e)openEditor(e);return;}
   if(d.gapStart){openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start:+d.gapStart,end:+d.gapEnd});return;}
@@ -856,15 +1037,35 @@ document.addEventListener('click',ev=>{
   if(d.deltarget){state.catDel.target=d.deltarget;renderSheet();return;}
   if(d.tadj){const f=t.closest('[data-field]').dataset.field;state.editing[f]+=(+d.tadj)*MIN;renderSheet();return;}
   if(d.snap){state.editing[d.snap]=+d.ms;renderSheet();return;}
-  if(d.color){state.catEdit.name=$('#catName').value;state.catEdit.icon=$('#catIcon').value;state.catEdit.color=d.color;renderSheet();return;}
-  if(d.icon!=null&&state.sheet==='cat'){state.catEdit.name=$('#catName').value;state.catEdit.icon=d.icon;renderSheet();return;}
+  // Icono y color se actualizan en el sitio, sin volver a pintar la hoja: si se repintara,
+  // el scroll de emojis saltaría arriba y el foco automático abriría el teclado.
+  if(d.color){state.catEdit.color=d.color;document.querySelectorAll('.swatches button').forEach(b=>b.classList.toggle('on',b.dataset.color===d.color));return;}
+  if(d.icon!=null&&state.sheet==='cat'){state.catEdit.icon=d.icon;$('#catIcon').value=d.icon;document.querySelectorAll('.iconpick button').forEach(b=>b.classList.toggle('on',b.dataset.icon===d.icon));return;}
   switch(d.act){
     case 'stop': stopRunning(); break;
     case 'startfrom': state.startFrom=+d.ms; render(); break;
     case 'resume-continue': {const rs=state.resume,last=data.entries.find(e=>e.id===rs.id); if(last){last.end=null;} closeSheet(); save(); render(); break;}
     case 'resume-gap': {const rs=state.resume; data.entries.push({id:uid(),cat:rs.cat,start:rs.now,end:null}); sortEntries(); closeSheet(); save(); render(); break;}
     case 'startfrom-cancel': state.startFrom=null; render(); break;
-    case 'edit-cats': state.view='ajustes'; render(); window.scrollTo(0,0); break;
+    case 'edit-cats': state.prevView=state.view; state.view='ajustes'; render(); window.scrollTo(0,0); break;
+    case 'new-mark': state.catEdit={kind:'mark',id:null,name:'',color:PALETTE.find(h=>!data.marks.some(m=>m.color===h))||PALETTE[0],icon:''};state.sheet='cat';renderSheet(); break;
+    case 'mark-delete': {
+      const id=state.catEdit.id;
+      if(!confirm('¿Eliminar esta marca? Se pierden los días marcados.')) return;
+      data.marks=data.marks.filter(m=>m.id!==id);
+      for(const k of Object.keys(data.markDays)){const r=data.markDays[k].filter(x=>x!==id); if(r.length)data.markDays[k]=r; else delete data.markDays[k];}
+      save(); closeSheet(); render(); break; }
+    case 'new-task': state.taskEdit={id:null,text:'',cat:(activeCats()[0]||{}).id};state.sheet='task';renderSheet(); break;
+    case 'task-save': {
+      const te=state.taskEdit, text=$('#taskText').value.trim();
+      if(!text){toast('Escribe la tarea');return;}
+      if(!te.cat){toast('Elige una categoría');return;}
+      if(te.id){const t=data.tasks.find(x=>x.id===te.id); if(t){t.text=text;t.cat=te.cat;}}
+      else data.tasks.push({id:uid(),cat:te.cat,text,done:false,created:Date.now(),doneAt:0});
+      state.taskClosed=state.taskClosed.filter(x=>x!==te.cat);
+      save(); closeSheet(); render(); break; }
+    case 'task-delete': if(confirm('¿Eliminar esta tarea?')){data.tasks=data.tasks.filter(t=>t.id!==state.taskEdit.id);save();closeSheet();render();} break;
+    case 'tasks-clear': if(confirm('¿Borrar las tareas hechas?')){data.tasks=data.tasks.filter(t=>!t.done);save();render();} break;
     case 'join-prev': {const r=running();const p=prevEntry(r);if(p){r.start=endOf(p);save();render();}break;}
     case 'manual': newManualEntry(dayStart(Date.now())); break;
     case 'manual-day': newManualEntry(state.selDay); break;
@@ -896,8 +1097,13 @@ document.addEventListener('click',ev=>{
     case 'cat-save': {
       const name=$('#catName').value.trim(); if(!name){toast('Escribe un nombre');return;}
       const icon=$('#catIcon').value.trim();
-      if(state.catEdit.id){const c=catById(state.catEdit.id);c.name=name;c.color=state.catEdit.color;c.icon=icon;}
-      else data.categories.push({id:uid(),name,color:state.catEdit.color,icon});
+      const ce=state.catEdit;
+      if(ce.kind==='mark'){
+        if(ce.id){const m=markById(ce.id);m.name=name;m.color=ce.color;m.icon=icon;}
+        else data.marks.push({id:uid(),name,color:ce.color,icon,archived:false});
+      }
+      else if(ce.id){const c=catById(ce.id);c.name=name;c.color=ce.color;c.icon=icon;}
+      else data.categories.push({id:uid(),name,color:ce.color,icon});
       save(); closeSheet(); render(); break; }
     case 'cat-archive': {
       const c=catById(state.catEdit.id); c.archived=!c.archived;
@@ -931,13 +1137,16 @@ document.addEventListener('change',ev=>{
 // Pulsación larga (500 ms) sobre una categoría de la pantalla principal: abre su edición.
 let lp={timer:null,fired:false,x:0,y:0};
 document.addEventListener('pointerdown',ev=>{
-  const chip=ev.target.closest('.chip[data-start]'); if(!chip) return;
+  const chip=ev.target.closest('.chip[data-start],.markchip[data-mark]'); if(!chip) return;
   lp.fired=false; lp.x=ev.clientX; lp.y=ev.clientY;
-  lp.timer=setTimeout(()=>{lp.fired=true; if(navigator.vibrate) navigator.vibrate(15); const c=catById(chip.dataset.start); state.catEdit={id:c.id,name:c.name,color:c.color,icon:c.icon||''}; state.sheet='cat'; renderSheet();},500);
+  lp.timer=setTimeout(()=>{lp.fired=true; if(navigator.vibrate) navigator.vibrate(15);
+    const o=chip.dataset.mark?markById(chip.dataset.mark):catById(chip.dataset.start);
+    state.catEdit={kind:chip.dataset.mark?'mark':'cat',id:o.id,name:o.name,color:o.color,icon:o.icon||''};
+    state.sheet='cat'; renderSheet();},500);
 });
 document.addEventListener('pointermove',ev=>{ if(lp.timer&&Math.hypot(ev.clientX-lp.x,ev.clientY-lp.y)>10){clearTimeout(lp.timer);lp.timer=null;} });
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(lp.timer);lp.timer=null;}));
-document.addEventListener('contextmenu',ev=>{ if(ev.target.closest('.chip[data-start]')) ev.preventDefault(); });
+document.addEventListener('contextmenu',ev=>{ if(ev.target.closest('.chip[data-start],.markchip[data-mark]')) ev.preventDefault(); });
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&state.sheet)closeSheet();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();autoBackupIfDue();}});
 window.addEventListener('storage',ev=>{if(ev.key===KEY){data=load();render();}});
