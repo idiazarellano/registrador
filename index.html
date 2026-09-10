@@ -156,13 +156,7 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .gaphint strong{color:var(--ink);font-weight:600;font-size:14px}
 .gaphint.armed{background:var(--accent-soft);margin:0 -16px -14px;padding:12px 16px;border-radius:0 0 var(--r) var(--r);flex-direction:row;align-items:center}
 .gaphint .row{gap:8px}
-.adjust{display:flex;flex-direction:column;gap:6px}
-.adjust-row{display:flex;gap:4px;align-items:center}
-.adjust-row button{flex:1;min-width:0;height:38px;border-radius:9px;background:var(--surface-2);font-weight:700;font-size:13px}
-.adjust-row button:active{background:var(--surface-3)}
-.adjust-row .val{flex:1.6;min-width:74px;text-align:center;font-size:17px;font-weight:600}
-.adjust-row .val input{width:100%;text-align:center;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:6px 2px;font-family:var(--mono);font-size:16px}
-.adjust .hint{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-2);gap:8px;flex-wrap:wrap}
+.hint{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-2);gap:8px;flex-wrap:wrap}
 .linkbtn{color:var(--accent);font-weight:700;font-size:12px;padding:6px 0}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 18px;border-radius:12px;font-weight:800;background:var(--surface-2);font-size:15px}
 .btn.primary{background:var(--accent);color:var(--accent-ink)}
@@ -225,6 +219,7 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .se{display:flex;flex-direction:column;gap:6px;min-width:0}
 .se .label{text-align:center}
 .se input[type=time]{width:100%;text-align:center;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:8px 2px;font-family:var(--mono);font-size:17px}
+.now-panel .se-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .se-adj{display:flex;gap:4px}
 .se-adj button{flex:1;min-width:0;height:36px;border-radius:9px;background:var(--surface-2);font-weight:700;font-size:12px}
 .se-adj button:active{background:var(--surface-3)}
@@ -491,6 +486,13 @@ function startCategory(catId){
   }
   data.entries.push({id:uid(),cat:catId,start:now,end:null});
   sortEntries(); save(); render();
+}
+function stopRunningAt(ms){
+  const r=running(); if(!r) return;
+  if(ms<=r.start){toast('El fin tiene que ir después del inicio');render();return;}
+  if(ms>roundTo(Date.now())){toast('El fin no puede ser futuro');render();return;}
+  r.end=ms; const m=resolveOverlaps(r); if(m) toast(m);
+  save(); render(); toast('Detenida a las '+fmtTime(ms));
 }
 function stopRunning(){const r=running(); if(!r) return; r.end=roundTo(Date.now()); if(r.end<=r.start){data.entries=data.entries.filter(e=>e!==r);toast('Registro descartado: duraba menos de '+STEP()+' min');} save(); render();}
 /* Recorta los registros vecinos para que no se solapen con `e`.
@@ -808,16 +810,20 @@ function viewHoy(){
   const banner=backupPending()?`<div class="banner"><span class="grow">Registros sin copia de seguridad.</span><button class="btn sm primary" data-act="backup">Guardar copia</button></div>`:'';
   const nowPanel=r?`<div class="card now-panel">
       <div class="now-head">${iconOrDot(catById(r.cat),true)}<span class="now-cat">${esc(catById(r.cat).name)}</span><span class="now-elapsed num" id="elapsed">${fmtClock(Math.max(0,Date.now()-r.start))}</span></div>
-      <div class="adjust">
-        <div class="label">Empezó a las</div>
-        <div class="adjust-row">
-          ${adjButtons('adj')}
-          <span class="val num">${fmtTime(r.start)}</span>
-          ${adjButtons('adj',true)}
+      <div class="se-grid">
+        <div class="se">
+          <div class="label">Empezó a las</div>
+          <input type="time" step="${STEP()*60}" value="${fmtTime(r.start)}" data-rinput="start" aria-label="Hora de inicio">
+          <div class="se-adj">${adjButtons('adj')}${adjButtons('adj',true)}</div>
         </div>
-        <div class="hint"><span>Corrige el inicio si lo pulsaste tarde.</span>${(()=>{const p=prevEntry(r);return p&&r.start-endOf(p)>MIN?`<button class="linkbtn" data-act="join-prev">Empalmar con la anterior (${fmtTime(endOf(p))})</button>`:'';})()}</div>
+        <div class="se">
+          <div class="label">Termina a las</div>
+          <input type="time" step="${STEP()*60}" value="${fmtTime(roundTo(Date.now()))}" data-rinput="end" aria-label="Hora de fin">
+          <div class="se-adj">${adjButtons('radj')}${adjButtons('radj',true)}</div>
+        </div>
       </div>
-      <button class="btn stop" data-act="stop">Detener</button>
+      <div class="hint"><span>Corrige el inicio si lo pulsaste tarde; toca el fin para detenerla a esa hora.</span>${(()=>{const p=prevEntry(r);return p&&r.start-endOf(p)>MIN?`<button class="linkbtn" data-act="join-prev">Empalmar con la anterior (${fmtTime(endOf(p))})</button>`:'';})()}</div>
+      <button class="btn stop" data-act="stop">Detener ahora</button>
     </div>`
   :`<div class="card now-panel"><div class="now-head"><span class="idle">Nada en marcha. Toca una categoría para empezar a contar.</span></div>
      ${(()=>{const last=[...data.entries].sort((a,b)=>endOf(b)-endOf(a))[0];
@@ -1325,6 +1331,18 @@ function newManualEntry(ds){
   openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start,end});
 }
 // Dos saltos por lado: el paso configurado y uno grande (el triple, o 5 min si el paso es 1).
+/* Mueve el inicio de la actividad en marcha. Si la anterior terminaba justo donde
+   empezaba esta, su fin la acompaña: al restar y volver a sumar no se abre un hueco
+   artificial entre las dos. */
+function setRunningStart(ns){
+  const r=running(); if(!r) return false;
+  if(ns>roundTo(Date.now())){toast('El inicio no puede ser futuro');return false;}
+  const p=prevEntry(r), glued=p&&p.end!=null&&p.end===r.start;
+  r.start=ns;
+  if(glued&&ns>p.start&&ns<=roundTo(Date.now())) p.end=ns;
+  const m=resolveOverlaps(r); if(m) toast(m);
+  save(); return true;
+}
 function adjButtons(attr,plus){
   const steps=[STEP(),STEP()===1?5:STEP()*3];
   const list=plus?steps:steps.slice().reverse();
@@ -1461,7 +1479,8 @@ document.addEventListener('click',ev=>{
   if(d.start){ if(lp.fired){lp.fired=false;return;} startCategory(d.start);return;}
   if(d.edit){const e=data.entries.find(x=>x.id===d.edit);if(e)openEditor(e);return;}
   if(d.gapStart){openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start:+d.gapStart,end:+d.gapEnd});return;}
-  if(d.adj){const r=running();if(!r)return;const ns=r.start+(+d.adj)*MIN;if(ns>roundTo(Date.now())){toast('El inicio no puede ser futuro');return;}r.start=ns;const m=resolveOverlaps(r);if(m)toast(m);save();render();return;}
+  if(d.adj){const r=running();if(!r)return;if(setRunningStart(r.start+(+d.adj)*MIN))render();return;}
+  if(d.radj){const r=running();if(!r)return;stopRunningAt(roundTo(Date.now())+(+d.radj)*MIN);return;}
   if(d.range){state.range=+d.range;render();return;}
   if(d.analysis){state.analysis=d.analysis;render();return;}
   if(d.statcat){state.statCat=d.statcat;render();return;}
@@ -1579,6 +1598,13 @@ document.addEventListener('click',ev=>{
 });
 document.addEventListener('change',ev=>{
   const t=ev.target;
+  if(t.dataset.rinput){
+    const [h,m]=t.value.split(':').map(Number); if(isNaN(h)) return;
+    const r=running(); if(!r) return;
+    const f=t.dataset.rinput, ms=dayStart(f==='start'?r.start:Date.now())+h*HOUR+m*MIN;
+    if(f==='start'){ if(setRunningStart(ms)) render(); } else stopRunningAt(ms);
+    return;
+  }
   if(t.dataset.tinput){
     const [h,m]=t.value.split(':').map(Number); if(isNaN(h)) return;
     const f=t.dataset.tinput, base=dayStart(state.editing[f]);

@@ -245,5 +245,27 @@ chk('estadística con reparto', statsBalancesHTML([t0,ayer],[]).indexOf('ocasion
 chk('sin balanzas activas no se pinta nada', (()=>{data.balances[0].archived=true;const r=balancesHTML(t0)===''&&statsBalancesHTML([t0],[])==='';data.balances[0].archived=false;return r;})());
 chk('borrar registros se lleva las ocasiones pero no las balanzas', (()=>{wipeEntries();return data.balanceLog.length===0&&data.balances.length===1;})());
 data.balances=[]; data.balanceLog=[];
+// El inicio de lo que corre arrastra el fin de la anterior si iban pegadas: al restar
+// y volver a sumar no debe quedar un hueco artificial entre las dos.
+(function(){
+  const ini=t0+9*H, med=t0+10*H;
+  data.entries=[{id:'p',cat:'c1',start:ini,end:med},{id:'r',cat:'c2',start:med,end:null}];
+  setRunningStart(med-15*MIN);
+  chk('restar arrastra el fin de la anterior', data.entries[0].end===med-15*MIN);
+  setRunningStart(med);
+  chk('sumar lo devuelve, sin hueco', data.entries[0].end===med && data.entries[1].start===med);
+  // con un hueco real de por medio, sumar no se lo come
+  data.entries=[{id:'p',cat:'c1',start:ini,end:med-30*MIN},{id:'r',cat:'c2',start:med,end:null}];
+  setRunningStart(med+5*MIN);
+  chk('un hueco real se respeta', data.entries[0].end===med-30*MIN);
+  // detener a una hora concreta
+  data.entries=[{id:'r',cat:'c2',start:ini,end:null}];
+  stopRunningAt(ini+40*MIN);
+  chk('detener a una hora concreta', data.entries[0].end===ini+40*MIN);
+  data.entries=[{id:'r',cat:'c2',start:ini,end:null}];
+  stopRunningAt(ini-5*MIN);
+  chk('no se puede terminar antes de empezar', data.entries[0].end===null);
+  data.entries=[];
+})();
 print('FALLOS7: '+fails);
 })();
