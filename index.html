@@ -43,7 +43,7 @@
   --shadow:0 10px 30px rgba(0,0,0,.5);
 }
 *{box-sizing:border-box}
-html,body{height:100%}
+html,body{min-height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -51,9 +51,9 @@ input,select{font:inherit;color:inherit}
 h1,h2,h3{margin:0;text-wrap:balance}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
-#app{display:flex;flex-direction:column;min-height:100%;max-width:640px;margin:0 auto}
-main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:18px}
-.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:20}
+#app{display:flex;flex-direction:column;min-height:100dvh;max-width:640px;margin:0 auto}
+main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
+.tabs{position:sticky;bottom:0;margin-top:auto;display:flex;justify-content:center;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:20}
 .tabs .inner{display:flex;width:100%;max-width:640px}
 .tabs button{flex:1;padding:10px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--ink-3)}
 .tabs button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -93,6 +93,13 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .task.done .tcheck{border-color:var(--accent);background:var(--accent-soft)}
 .task .ttext{flex:1;min-width:0;text-align:left;font-size:14px;padding:4px 0}
 .task.done .ttext{text-decoration:line-through;color:var(--ink-3)}
+.taskadd{align-self:flex-start;margin-top:8px;padding:6px 0;font-size:13px;font-weight:700;color:var(--ink-3)}
+.taskadd:active{color:var(--accent)}
+/* Realimentación del «mantener pulsado»: se encoge y una línea recorre el elemento. */
+.lp{position:relative;transition:transform .12s ease}
+.lp.holding{transform:scale(.96)}
+.lp.holding::after{content:'';position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--accent);border-radius:2px;animation:lpfill .5s linear forwards;pointer-events:none}
+@keyframes lpfill{from{width:0}to{width:100%}}
 .tplay{width:32px;height:32px;flex:none;border-radius:9px;background:var(--surface-2);color:var(--ink-2);font-size:12px}
 /* Barras verticales apiladas: día tipo y día de la semana. */
 .hourbars{display:flex;align-items:flex-end;gap:2px;height:132px;margin-top:12px}
@@ -133,6 +140,8 @@ main{flex:1;padding:14px 16px calc(84px + env(safe-area-inset-bottom));display:f
 .daybar.small{height:20px;border-radius:5px}
 .daybar.small .seg{border-right-width:1px}
 .ticks{display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:var(--ink-3)}
+.ticks.cols{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;justify-content:initial}
+.ticks.cols span{width:auto;grid-row:1;text-align:center;display:block}
 .ticks span{width:0;text-align:center;display:inline-flex;justify-content:center}
 .ticks span:first-child{justify-content:flex-start}
 .ticks span:last-child{justify-content:flex-end}
@@ -284,7 +293,7 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .list .mv:disabled{opacity:.3}
 .banner{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--accent-soft);font-size:13px}
 .banner .grow{flex:1}
-.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;z-index:40;box-shadow:var(--shadow);max-width:90vw;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;z-index:40;box-shadow:var(--shadow);max-width:90vw;text-align:center}
 .mono-small{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
 .dayhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .dayhead button{padding:6px 10px;border-radius:8px;background:var(--surface-2);font-weight:800}
@@ -786,9 +795,9 @@ function viewTareas(){
           <span class="count num">${np||'✓'}</span><span class="chev">${closed?'▸':'▾'}</span></button>
         ${closed?'':`<div class="tasks">${g.list.map(t=>`<div class="task ${t.done?'done':''}">
           <button class="tcheck" data-tdone="${t.id}" aria-pressed="${!!t.done}" aria-label="Hecha">${t.done?'✓':''}</button>
-          <button class="grow ttext" data-task="${t.id}">${esc(t.text)}</button>
+          <button class="grow ttext" data-tdone="${t.id}" data-task="${t.id}">${esc(t.text)}</button>
           ${t.done?'':`<button class="tplay" data-start="${g.c.id}" aria-label="Empezar a contar ${esc(g.c.name)}">▶</button>`}
-        </div>`).join('')}</div>`}
+        </div>`).join('')}<button class="taskadd" data-act="new-task" data-tcat="${g.c.id}">+ Añadir a ${esc(g.c.name)}</button></div>`}
       </section>`;}).join(''):'<p class="empty">Sin tareas. Sirven de recordatorio: «llamar al fontanero», y ya.</p>'}
     ${doneN?`<div class="row end"><button class="linkbtn danger" data-act="tasks-clear">Borrar las ${doneN} hechas</button></div>`:''}`;
 }
@@ -943,7 +952,7 @@ function statsDiaTipo(statDays){
   return `<section class="card">
     <div class="section-head"><h2>Día tipo</h2><span class="label">${n} días</span></div>
     <div class="hourbars">${hours.map((h,i)=>`<div class="hcol" title="${pad(i)}:00 · ${top[i]?esc(top[i]):'sin registrar'}">${stackHTML(h.m,1,h.t/(n*HOUR))}</div>`).join('')}</div>
-    <div class="ticks"><span>0</span><span>3</span><span>6</span><span>9</span><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="ticks cols"><span style="grid-column:1">0</span><span style="grid-column:4">3</span><span style="grid-column:7">6</span><span style="grid-column:10">9</span><span style="grid-column:13">12</span><span style="grid-column:16">15</span><span style="grid-column:19">18</span><span style="grid-column:22">21</span></div>
     ${legendHTML(used)}
     <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:10px">Cada columna es una hora del día. Lo que le falta para llegar arriba es tiempo sin registrar.</p>
   </section>`;
@@ -1185,7 +1194,7 @@ function statsHuecos(days){
     <p style="margin:0;font-size:14px;color:var(--ink-2)"><strong class="num">${fmtDur(total)}</strong> sin registrar en ${gaps.length} huecos, repartidos en ${withGaps} ${withGaps===1?'día':'días'}. Es un <strong class="num">+${Math.round(total/Math.max(1,reg)*100)} %</strong> sobre lo registrado.</p>
     <div class="section-head" style="margin-top:16px"><h2>A qué hora se escapan</h2></div>
     <div class="hourbars">${byHour.map((ms,i)=>`<div class="hcol" title="${pad(i)}:00 · ${fmtDur(ms)}"><div class="vbar"><div class="vstack" style="height:${ms/maxH*100}%"><i style="flex:1 1 0;background:var(--ink-3)"></i></div></div></div>`).join('')}</div>
-    <div class="ticks"><span>0</span><span>3</span><span>6</span><span>9</span><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="ticks cols"><span style="grid-column:1">0</span><span style="grid-column:4">3</span><span style="grid-column:7">6</span><span style="grid-column:10">9</span><span style="grid-column:13">12</span><span style="grid-column:16">15</span><span style="grid-column:19">18</span><span style="grid-column:22">21</span></div>
     <div class="section-head" style="margin-top:16px"><h2>Detrás de qué actividad</h2></div>
     <div class="totals" style="margin-top:10px">${afterRows.map(r=>`<div class="trow">
       <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
@@ -1447,8 +1456,7 @@ document.addEventListener('click',ev=>{
   if(d.baledit){const b=balById(d.baledit);state.catEdit={kind:'balance',id:b.id,name:b.name,color:b.color,icon:b.icon||'',a:b.a.label,b:b.b.label};state.sheet='cat';renderSheet();return;}
   if(d.markedit){const m=markById(d.markedit);state.catEdit={kind:'mark',id:m.id,name:m.name,color:m.color,icon:m.icon||''};state.sheet='cat';renderSheet();return;}
   if(d.tgroup){state.taskClosed=state.taskClosed.includes(d.tgroup)?state.taskClosed.filter(x=>x!==d.tgroup):state.taskClosed.concat(d.tgroup);render();return;}
-  if(d.tdone){const t=data.tasks.find(x=>x.id===d.tdone);if(t){t.done=!t.done;t.doneAt=t.done?Date.now():0;save();render();}return;}
-  if(d.task){const t=data.tasks.find(x=>x.id===d.task);if(t){state.taskEdit={id:t.id,text:t.text,cat:t.cat};state.sheet='task';renderSheet();}return;}
+  if(d.tdone){ if(lp.fired){lp.fired=false;return;} const t=data.tasks.find(x=>x.id===d.tdone);if(t){t.done=!t.done;t.doneAt=t.done?Date.now():0;save();render();}return;}
   if(d.taskcat){state.taskEdit.cat=d.taskcat;document.querySelectorAll('[data-taskcat]').forEach(b=>b.classList.toggle('on',b.dataset.taskcat===d.taskcat));return;}
   if(d.start){ if(lp.fired){lp.fired=false;return;} startCategory(d.start);return;}
   if(d.edit){const e=data.entries.find(x=>x.id===d.edit);if(e)openEditor(e);return;}
@@ -1497,7 +1505,7 @@ document.addEventListener('click',ev=>{
       data.marks=data.marks.filter(m=>m.id!==id);
       for(const k of Object.keys(data.markDays)){const r=data.markDays[k].filter(x=>x!==id); if(r.length)data.markDays[k]=r; else delete data.markDays[k];}
       save(); closeSheet(); render(); break; }
-    case 'new-task': state.taskEdit={id:null,text:'',cat:(activeCats()[0]||{}).id};state.sheet='task';renderSheet(); break;
+    case 'new-task': state.taskEdit={id:null,text:'',cat:d.tcat||(activeCats()[0]||{}).id};state.sheet='task';renderSheet(); break;
     case 'task-save': {
       const te=state.taskEdit, text=$('#taskText').value.trim();
       if(!text){toast('Escribe la tarea');return;}
@@ -1583,20 +1591,29 @@ document.addEventListener('change',ev=>{
   }
 });
 // Pulsación larga (500 ms) sobre una categoría de la pantalla principal: abre su edición.
-let lp={timer:null,fired:false,x:0,y:0};
+let lp={timer:null,fired:false,x:0,y:0,el:null};
+const LP_SEL='.chip[data-start],.markchip[data-mark],.balbtn[data-bal],.ttext[data-task]';
+function lpClear(){clearTimeout(lp.timer);lp.timer=null;if(lp.el){lp.el.classList.remove('holding','lp');lp.el=null;}}
 document.addEventListener('pointerdown',ev=>{
-  const chip=ev.target.closest('.chip[data-start],.markchip[data-mark],.balbtn[data-bal]'); if(!chip) return;
+  const chip=ev.target.closest(LP_SEL); if(!chip) return;
   lp.fired=false; lp.x=ev.clientX; lp.y=ev.clientY;
+  lp.el=chip; chip.classList.add('lp'); requestAnimationFrame(()=>{if(lp.el===chip)chip.classList.add('holding');});
   lp.timer=setTimeout(()=>{lp.fired=true; if(navigator.vibrate) navigator.vibrate(15);
+    lpClear();
+    if(chip.dataset.task){
+      const t=data.tasks.find(x=>x.id===chip.dataset.task);
+      if(t){state.taskEdit={id:t.id,text:t.text,cat:t.cat};state.sheet='task';renderSheet();}
+      return;
+    }
     const kind=chip.dataset.bal?'balance':chip.dataset.mark?'mark':'cat';
     const o=kind==='balance'?balById(chip.dataset.bal):kind==='mark'?markById(chip.dataset.mark):catById(chip.dataset.start);
     state.catEdit={kind,id:o.id,name:o.name,color:o.color,icon:o.icon||''};
     if(kind==='balance'){state.catEdit.a=o.a.label;state.catEdit.b=o.b.label;}
     state.sheet='cat'; renderSheet();},500);
 });
-document.addEventListener('pointermove',ev=>{ if(lp.timer&&Math.hypot(ev.clientX-lp.x,ev.clientY-lp.y)>10){clearTimeout(lp.timer);lp.timer=null;} });
-['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(lp.timer);lp.timer=null;}));
-document.addEventListener('contextmenu',ev=>{ if(ev.target.closest('.chip[data-start],.markchip[data-mark],.balbtn[data-bal]')) ev.preventDefault(); });
+document.addEventListener('pointermove',ev=>{ if(lp.timer&&Math.hypot(ev.clientX-lp.x,ev.clientY-lp.y)>10) lpClear(); });
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,lpClear));
+document.addEventListener('contextmenu',ev=>{ if(ev.target.closest(LP_SEL)) ev.preventDefault(); });
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&state.sheet)closeSheet();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();autoBackupIfDue();}});
 window.addEventListener('storage',ev=>{if(ev.key===KEY){data=load();render();}});
