@@ -473,9 +473,11 @@ function startCategory(catId){
   } else {
     // detenido hace menos de un paso: se empalma con el fin del anterior
     const last=[...data.entries].filter(e=>e.end!=null).sort((a,b)=>b.end-a.end)[0];
-    if(last&&Date.now()-last.end<STEP()*MIN&&last.end<=now){
-      if(last.cat===catId){ state.resume={id:last.id,cat:catId,now}; state.sheet='resume'; renderSheet(); return; }
-      now=last.end; toast('Empalmado con el anterior ('+fmtTime(last.end)+')');
+    if(last&&last.end<=now){
+      const since=Date.now()-last.end;
+      // misma categoría poco después: la pregunta es si unir los dos, no desde cuándo empezar
+      if(last.cat===catId&&since<RESUME_WINDOW){ state.resume={id:last.id,cat:catId,now}; state.sheet='resume'; renderSheet(); return; }
+      if(since<STEP()*MIN){ now=last.end; toast('Empalmado con el anterior ('+fmtTime(last.end)+')'); }
     }
   }
   data.entries.push({id:uid(),cat:catId,start:now,end:null});
@@ -593,6 +595,7 @@ function importJSON(text,mode){
 }
 
 /* ============ Interfaz ============ */
+const RESUME_WINDOW=HOUR; // misma categoría dentro de esta ventana: se ofrece unir
 const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[],analysis:'resumen',statCat:null,weeks:26};
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1402,8 +1405,8 @@ function renderSheet(){
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Continuar">
       <div class="handle"></div><h2>${esc(c.name)} terminó a las <span class="num">${fmtTime(last.end)}</span></h2>
       <p style="margin:0;color:var(--ink-2);font-size:14px">Han pasado ${fmtDur(Date.now()-last.end,true)}.</p>
-      <button class="btn primary" data-act="resume-continue">Continuar desde las ${fmtTime(last.end)}</button>
-      <button class="btn" data-act="resume-gap">Dejar hueco y empezar a las ${fmtTime(rs.now)}</button>
+      <button class="btn primary" data-act="resume-continue">Unir con la anterior (un solo registro desde las ${fmtTime(last.start)})</button>
+      <button class="btn" data-act="resume-gap">Dejar el hueco y empezar a las ${fmtTime(rs.now)}</button>
       <button class="btn ghost" data-close>Cancelar</button></div></div>`;
   } else if(state.sheet==='wipe'){
     const n=data.entries.length;
