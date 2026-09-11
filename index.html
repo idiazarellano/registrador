@@ -468,7 +468,7 @@ function startCategory(catId){
     data.entries.push({id:uid(),cat:catId,start:from,end:null}); sortEntries(); save(); render();
     toast('Empezado desde las '+fmtTime(from)); return;
   }
-  state.startFrom=null;
+  state.startFrom=null; state.pendEnd=null;
   if(r){
     if(r.cat===catId){stopRunning();return;}
     // menos de medio paso en marcha: fue un error de categoría, no una actividad
@@ -487,14 +487,22 @@ function startCategory(catId){
   data.entries.push({id:uid(),cat:catId,start:now,end:null});
   sortEntries(); save(); render();
 }
+/* Hora de fin en edición: mientras se ajusta queda congelada, sin cerrar la actividad. */
+function pendEnd(){ return state.pendEnd!=null?state.pendEnd:roundTo(Date.now()); }
+function setPendEnd(ms){
+  const r=running(); if(!r) return;
+  if(ms<=r.start){toast('El fin tiene que ir después del inicio');render();return;}
+  if(ms>roundTo(Date.now())){toast('El fin no puede ser futuro');render();return;}
+  state.pendEnd=ms===roundTo(Date.now())?null:ms; render();
+}
 function stopRunningAt(ms){
   const r=running(); if(!r) return;
   if(ms<=r.start){toast('El fin tiene que ir después del inicio');render();return;}
   if(ms>roundTo(Date.now())){toast('El fin no puede ser futuro');render();return;}
   r.end=ms; const m=resolveOverlaps(r); if(m) toast(m);
-  save(); render(); toast('Detenida a las '+fmtTime(ms));
+  state.pendEnd=null; save(); render(); toast('Finalizada a las '+fmtTime(ms));
 }
-function stopRunning(){const r=running(); if(!r) return; r.end=roundTo(Date.now()); if(r.end<=r.start){data.entries=data.entries.filter(e=>e!==r);toast('Registro descartado: duraba menos de '+STEP()+' min');} save(); render();}
+function stopRunning(){const r=running(); if(!r) return; state.pendEnd=null; r.end=roundTo(Date.now()); if(r.end<=r.start){data.entries=data.entries.filter(e=>e!==r);toast('Registro descartado: duraba menos de '+STEP()+' min');} save(); render();}
 /* Recorta los registros vecinos para que no se solapen con `e`.
    Si un vecino queda sin duración, se elimina. Devuelve un texto para avisar. */
 function resolveOverlaps(e){
@@ -607,7 +615,7 @@ function importJSON(text,mode){
 
 /* ============ Interfaz ============ */
 const RESUME_WINDOW=HOUR; // misma categoría dentro de esta ventana: se ofrece unir
-const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[],analysis:'resumen',statCat:null,weeks:26};
+const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,pendEnd:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[],analysis:'resumen',statCat:null,weeks:26};
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let toastTimer;
@@ -818,12 +826,12 @@ function viewHoy(){
         </div>
         <div class="se">
           <div class="label">Termina a las</div>
-          <input type="time" step="${STEP()*60}" value="${fmtTime(roundTo(Date.now()))}" data-rinput="end" aria-label="Hora de fin">
+          <input type="time" step="${STEP()*60}" value="${fmtTime(pendEnd())}" data-rinput="end" aria-label="Hora de fin">
           <div class="se-adj">${adjButtons('radj')}${adjButtons('radj',true)}</div>
         </div>
       </div>
-      <div class="hint"><span>Corrige el inicio si lo pulsaste tarde; toca el fin para detenerla a esa hora.</span>${(()=>{const p=prevEntry(r);return p&&r.start-endOf(p)>MIN?`<button class="linkbtn" data-act="join-prev">Empalmar con la anterior (${fmtTime(endOf(p))})</button>`:'';})()}</div>
-      <button class="btn stop" data-act="stop">Detener ahora</button>
+      <div class="hint"><span>Corrige el inicio si lo pulsaste tarde; ajusta el fin y pulsa el botón para cerrarla a esa hora.</span>${(()=>{const p=prevEntry(r);return p&&r.start-endOf(p)>MIN?`<button class="linkbtn" data-act="join-prev">Empalmar con la anterior (${fmtTime(endOf(p))})</button>`:'';})()}</div>
+      <button class="btn stop" data-act="stop">${state.pendEnd!=null?'Finalizar a las '+fmtTime(state.pendEnd):'Finalizar ahora'}</button>
     </div>`
   :`<div class="card now-panel"><div class="now-head"><span class="idle">Nada en marcha. Toca una categoría para empezar a contar.</span></div>
      ${(()=>{const last=[...data.entries].sort((a,b)=>endOf(b)-endOf(a))[0];
@@ -1381,7 +1389,7 @@ function renderSheet(){
         ${timeCol('start',ed.start,'Inicio',p&&Math.abs(ed.start-endOf(p))>MIN?`<button class="linkbtn" data-snap="start" data-ms="${endOf(p)}">= fin de la anterior<br>(${fmtTime(endOf(p))})</button>`:'')}
         <span class="se-arrow">→</span>
         ${ed.end==null
-          ?`<div class="se"><div class="label">Fin</div><div class="runline">En marcha</div><button class="linkbtn" data-act="edit-stop">Detener ahora</button></div>`
+          ?`<div class="se"><div class="label">Fin</div><div class="runline">En marcha</div><button class="linkbtn" data-act="edit-stop">Finalizar ahora</button></div>`
           :timeCol('end',ed.end,'Fin',nx&&Math.abs(nx.start-ed.end)>MIN?`<button class="linkbtn" data-snap="end" data-ms="${nx.start}">= inicio de la siguiente<br>(${fmtTime(nx.start)})</button>`:'')}
       </div>
       <div class="durline num">${ed.end==null?'Sigue en marcha desde hace '+fmtDur(Date.now()-ed.start)+'.':dur<0?'<span style="color:var(--danger)">El fin es anterior al inicio.</span>':dur<MIN?'Usa −X en el inicio o +X en el fin.':'Duración: '+fmtDur(dur,true)}</div>
@@ -1481,7 +1489,7 @@ document.addEventListener('click',ev=>{
   if(d.edit){const e=data.entries.find(x=>x.id===d.edit);if(e)openEditor(e);return;}
   if(d.gapStart){openEditor({id:null,cat:(activeCats()[0]||data.categories[0]||{}).id,start:+d.gapStart,end:+d.gapEnd});return;}
   if(d.adj){const r=running();if(!r)return;if(setRunningStart(r.start+(+d.adj)*MIN))render();return;}
-  if(d.radj){const r=running();if(!r)return;stopRunningAt(roundTo(Date.now())+(+d.radj)*MIN);return;}
+  if(d.radj){setPendEnd(pendEnd()+(+d.radj)*MIN);return;}
   if(d.range){state.range=+d.range;render();return;}
   if(d.analysis){state.analysis=d.analysis;render();return;}
   if(d.statcat){state.statCat=d.statcat;render();return;}
@@ -1505,7 +1513,7 @@ document.addEventListener('click',ev=>{
   if(d.color){state.catEdit.color=d.color;document.querySelectorAll('.swatches button').forEach(b=>b.classList.toggle('on',b.dataset.color===d.color));return;}
   if(d.icon!=null&&state.sheet==='cat'){state.catEdit.icon=d.icon;$('#catIcon').value=d.icon;document.querySelectorAll('.iconpick button').forEach(b=>b.classList.toggle('on',b.dataset.icon===d.icon));return;}
   switch(d.act){
-    case 'stop': stopRunning(); break;
+    case 'stop': stopRunningAt(pendEnd()); break;
     case 'startfrom': state.startFrom=+d.ms; render(); break;
     case 'resume-continue': {const rs=state.resume,last=data.entries.find(e=>e.id===rs.id); if(last){last.end=null;} closeSheet(); save(); render(); break;}
     case 'resume-gap': {const rs=state.resume; data.entries.push({id:uid(),cat:rs.cat,start:rs.now,end:null}); sortEntries(); closeSheet(); save(); render(); break;}
@@ -1602,8 +1610,8 @@ document.addEventListener('change',ev=>{
   if(t.dataset.rinput){
     const [h,m]=t.value.split(':').map(Number); if(isNaN(h)) return;
     const r=running(); if(!r) return;
-    const f=t.dataset.rinput, ms=dayStart(f==='start'?r.start:Date.now())+h*HOUR+m*MIN;
-    if(f==='start'){ if(setRunningStart(ms)) render(); } else stopRunningAt(ms);
+    const f=t.dataset.rinput, ms=dayStart(f==='start'?r.start:pendEnd())+h*HOUR+m*MIN;
+    if(f==='start'){ if(setRunningStart(ms)) render(); } else setPendEnd(ms);
     return;
   }
   if(t.dataset.tinput){
