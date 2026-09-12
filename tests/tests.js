@@ -264,7 +264,11 @@ data.balances=[]; data.balanceLog=[];
   chk('detener a una hora concreta', data.entries[0].end===ini+40*MIN);
   data.entries=[{id:'r',cat:'c2',start:ini,end:null}];
   stopRunningAt(ini-5*MIN);
-  chk('no se puede terminar antes de empezar', data.entries[0].end===null);
+  chk('terminar antes de empezar descarta el registro', data.entries.length===0);
+  // menos de medio paso: al redondear el fin cae en el inicio y no se guarda nada
+  data.entries=[{id:'r',cat:'c2',start:ini,end:null}];
+  stopRunningAt(ini);
+  chk('duración nula se descarta', data.entries.length===0);
   data.entries=[];
 })();
 print('FALLOS7: '+fails);

@@ -497,12 +497,15 @@ function setPendEnd(ms){
 }
 function stopRunningAt(ms){
   const r=running(); if(!r) return;
-  if(ms<=r.start){toast('El fin tiene que ir después del inicio');render();return;}
+  if(ms<=r.start){discardRunning(r);return;}
   if(ms>roundTo(Date.now())){toast('El fin no puede ser futuro');render();return;}
   r.end=ms; const m=resolveOverlaps(r); if(m) toast(m);
   state.pendEnd=null; save(); render(); toast('Finalizada a las '+fmtTime(ms));
 }
-function stopRunning(){const r=running(); if(!r) return; state.pendEnd=null; r.end=roundTo(Date.now()); if(r.end<=r.start){data.entries=data.entries.filter(e=>e!==r);toast('Registro descartado: duraba menos de '+STEP()+' min');} save(); render();}
+/* Una actividad que al redondear no llega a durar ni un paso (menos de medio paso
+   de reloj) no deja rastro: se descarta en lugar de guardarse con duración cero. */
+function discardRunning(r){ data.entries=data.entries.filter(e=>e!==r); state.pendEnd=null; save(); render(); toast('Registro descartado: duraba menos de '+STEP()+' min'); }
+function stopRunning(){const r=running(); if(!r) return; state.pendEnd=null; r.end=roundTo(Date.now()); if(r.end<=r.start){discardRunning(r);return;} save(); render();}
 /* Recorta los registros vecinos para que no se solapen con `e`.
    Si un vecino queda sin duración, se elimina. Devuelve un texto para avisar. */
 function resolveOverlaps(e){
