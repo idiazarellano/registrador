@@ -161,6 +161,15 @@ toggleMark('m1',t0); chk('marca quitada', !isMarked('m1',t0)&&!Object.keys(data.
 data.tasks=[{id:'t1',cat:'c1',text:'Fontanero',done:false,created:1},{id:'t2',cat:'c1',text:'Ya',done:true,created:2}];
 chk('tareas agrupadas por categoría', taskGroups().length===1&&taskGroups()[0].list.length===2);
 chk('pendientes primero', taskGroups()[0].list[0].id==='t1');
+// valoraciones: poner, cambiar, quitar, medias y contraste
+data.ratings=[{id:'r1',name:'Sueño',color:'#333',icon:'',archived:false}]; data.ratingDays={};
+setRating('r1',t0,4); chk('nota puesta', ratingOf('r1',t0)===4);
+setRating('r1',t0,2); chk('nota cambiada', ratingOf('r1',t0)===2);
+setRating('r1',t0,2); chk('nota quitada al repetir', ratingOf('r1',t0)===null&&!Object.keys(data.ratingDays).length);
+chk('contraste sin días suficientes', ratingContrast('r1',[t0])===null);
+try{const v=viewHoy(); chk('viewHoy con valoraciones', v.includes('data-rate="r1"'));}catch(e){chk('viewHoy valoraciones '+e.message,false)}
+try{setRating('r1',t0,5); const v=viewStats(); chk('viewStats con valoraciones', v.includes('Valoraciones'));}catch(e){chk('viewStats valoraciones '+e.message,false)}
+data.ratings=[];data.ratingDays={};
 data.marks=[];data.markDays={};data.tasks=[];
 try{viewHoy(); chk('viewHoy ok',true);}catch(e){chk('viewHoy '+e.message,false)}
 print(fails?('FALLOS4: '+fails):'TODO OK 4');

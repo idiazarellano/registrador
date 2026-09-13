@@ -4,10 +4,10 @@ Aplicación web de un solo archivo (`index.html`) para registrar en qué dedicas
 
 ## Pantallas
 
-- **Hoy**: lo que está en marcha, las categorías, las marcas y las balanzas del día y los registros de hoy.
+- **Hoy**: lo que está en marcha, las categorías, las marcas, las balanzas y las valoraciones del día y los registros de hoy.
 - **Tareas**: recordatorios agrupados por categoría, en listas desplegables.
-- **Registros**: elegir un día y editarlo (barra, totales, huecos, marcas, balanzas, día de descanso).
-- **Datos**: estadísticas de días completos: por categoría, medias, comparación con el periodo anterior, marcas, balanzas y día a día.
+- **Registros**: elegir un día y editarlo (barra, totales, huecos, marcas, balanzas, valoraciones, día de descanso).
+- **Datos**: estadísticas de días completos: por categoría, medias, comparación con el periodo anterior, marcas, balanzas, valoraciones y día a día.
 - **Ajustes**: el engranaje de la esquina superior derecha (ya no ocupa pestaña).
 
 ## Marcas (eventos de sí o no)
@@ -19,6 +19,10 @@ Cosas que un día se hacen o no, sin horas ni duración: «he leído», «he tom
 Una balanza no es una actividad ni una marca: es **una ocasión que se presenta y se resuelve de una de dos maneras** («me lo callé» / «lo dije»). Se cuentan las veces, no el tiempo, y puede pasar varias veces al mismo día. Se crean en Hoy o en Ajustes → Balanzas, se apuntan tocando uno de los dos lados (en Hoy para hoy, en Registros para el día elegido), el botón ↺ deshace el último toque del día y una pulsación larga sobre un lado abre la edición.
 
 En Datos → Resumen aparecen el reparto del periodo y el total de ocasiones, con una frase de comparación con el periodo anterior. A propósito **no hay rachas ni colores de aprobado o suspenso**, y los dos lados se pintan igual de grandes: si apuntar un lado costara más que el otro, la cuenta dejaría de ser cierta. El número más informativo suele ser el total de ocasiones, no el porcentaje: si sube, casi siempre es que te estás dando cuenta más veces.
+
+## Valoraciones (nota del día del 1 al 5)
+
+Un criterio que se puntúa una vez al día: «calidad del sueño», «rendimiento en el trabajo». Se crean en Hoy o en Ajustes → Valoraciones, se puntúan tocando un número (en Hoy para hoy, en Registros para el día elegido; tocar la nota puesta la quita) y se editan con una pulsación larga sobre el nombre. Un día sin nota no cuenta en las medias. En Datos aparecen la media del periodo, la anterior, el reparto de notas y, con al menos dos días de 4–5 y dos de 1–2, las categorías cuya media diaria más cambia entre unos y otros.
 
 ## Tareas
 
@@ -85,7 +89,7 @@ Regla de la inserción: los dos vecinos se ajustan al nuevo registro (se acortan
 
 Arriba de la pantalla se elige el tipo de análisis; la fila de debajo cambia con él (periodo en los tres primeros, categoría y número de semanas en Progresión).
 
-- **Resumen**: totales por categoría con porcentaje, media por día y comparación con el periodo anterior (▲▼), marcas, balanzas y día a día.
+- **Resumen**: totales por categoría con porcentaje, media por día y comparación con el periodo anterior (▲▼), marcas, balanzas, valoraciones y día a día.
 - **Día tipo**: 24 columnas, una por hora. Cada una reparte por categoría el tiempo registrado en esa hora a lo largo del periodo; lo que le falta para llegar arriba es tiempo sin registrar. Enseña la rutina: a qué hora empiezas de verdad, cuándo se rompe la tarde.
 - **Semana**: media de cada día de la semana, apilada por categoría. No cuenta los días de descanso.
 - **Progresión**: una barra por semana de una categoría (12, 26 o 52 semanas) y la línea de la media de cuatro semanas, más una frase con las últimas cuatro semanas frente a las cuatro anteriores. La semana en curso no aparece hasta que termina.
