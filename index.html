@@ -160,6 +160,7 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .dot{display:inline-block;width:14px;height:14px;border-radius:50%;flex:none}
 .now-cat{font-size:19px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .now-elapsed{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.now-elapsed.frozen{color:var(--ink-3)}
 .idle{color:var(--ink-2);font-size:15px}
 .gaphint{display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--ink-2);padding-top:4px}
 .gaphint strong{color:var(--ink);font-weight:600;font-size:14px}
@@ -506,6 +507,8 @@ function startCategory(catId){
 }
 /* Hora de fin en edición: mientras se ajusta queda congelada, sin cerrar la actividad. */
 function pendEnd(){ return state.pendEnd!=null?state.pendEnd:roundTo(Date.now()); }
+// Con el fin ajustado, el cronómetro se congela en inicio → fin; sin ajustar, sigue corriendo.
+function elapsedOf(r){ return Math.max(0,(state.pendEnd!=null?state.pendEnd:Date.now())-r.start); }
 function setPendEnd(ms){
   const r=running(); if(!r) return;
   if(ms<=r.start){toast('El fin tiene que ir después del inicio');render();return;}
@@ -890,7 +893,7 @@ function viewHoy(){
   let total=0; tot.forEach(v=>total+=v);
   const banner=backupPending()?`<div class="banner"><span class="grow">Registros sin copia de seguridad.</span><button class="btn sm primary" data-act="backup">Guardar copia</button></div>`:'';
   const nowPanel=r?`<div class="card now-panel">
-      <div class="now-head">${iconOrDot(catById(r.cat),true)}<span class="now-cat">${esc(catById(r.cat).name)}</span><span class="now-elapsed num" id="elapsed">${fmtClock(Math.max(0,Date.now()-r.start))}</span></div>
+      <div class="now-head">${iconOrDot(catById(r.cat),true)}<span class="now-cat">${esc(catById(r.cat).name)}</span><span class="now-elapsed num ${state.pendEnd!=null?'frozen':''}" id="elapsed">${fmtClock(elapsedOf(r))}</span></div>
       <div class="se-grid">
         <div class="se">
           <div class="label">Empezó a las</div>
@@ -1746,7 +1749,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();
 window.addEventListener('storage',ev=>{if(ev.key===KEY){data=load();render();}});
 
 // reloj: el cronómetro cada segundo, la barra cada minuto
-setInterval(()=>{const el=$('#elapsed'),r=running();if(el&&r)el.textContent=fmtClock(Math.max(0,Date.now()-r.start));},1000);
+setInterval(()=>{const el=$('#elapsed'),r=running();if(el&&r)el.textContent=fmtClock(elapsedOf(r));},1000);
 setInterval(()=>{if(state.view==='hoy'&&!state.sheet)render();},60000);
 render();
 autoBackupIfDue();
