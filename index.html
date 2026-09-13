@@ -512,7 +512,7 @@ function elapsedOf(r){ return Math.max(0,(state.pendEnd!=null?state.pendEnd:Date
 function setPendEnd(ms){
   const r=running(); if(!r) return;
   if(ms<=r.start){toast('El fin tiene que ir después del inicio');render();return;}
-  if(ms>roundTo(Date.now())){toast('El fin no puede ser futuro');render();return;}
+  if(ms>roundTo(Date.now())){toast('El fin no puede ser futuro: queda en la hora actual');state.pendEnd=null;render();return;}
   state.pendEnd=ms===roundTo(Date.now())?null:ms; render();
 }
 function stopRunningAt(ms){
