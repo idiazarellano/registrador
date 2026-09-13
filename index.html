@@ -95,11 +95,12 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .task.done .ttext{text-decoration:line-through;color:var(--ink-3)}
 .taskadd{align-self:flex-start;margin-top:8px;padding:6px 0;font-size:13px;font-weight:700;color:var(--ink-3)}
 .taskadd:active{color:var(--accent)}
-/* Realimentación del «mantener pulsado»: se encoge y una línea recorre el elemento. */
-.lp{position:relative;transition:transform .12s ease}
-.lp.holding{transform:scale(.96)}
-.lp.holding::after{content:'';position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--accent);border-radius:2px;animation:lpfill .5s linear forwards;pointer-events:none}
-@keyframes lpfill{from{width:0}to{width:100%}}
+/* Realimentación del «mantener pulsado»: se hunde poco a poco mientras se mantiene
+   y, al cumplirse, rebota con un halo, como un botón que «hace clic». */
+.lp{transition:transform .5s cubic-bezier(.3,0,.8,.6),filter .5s ease}
+.lp.holding{transform:scale(.92);filter:brightness(.92)}
+.lpfired{animation:lppop .32s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes lppop{0%{transform:scale(.9);box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent)}60%{transform:scale(1.04)}100%{transform:scale(1);box-shadow:0 0 0 12px transparent}}
 .tplay{width:32px;height:32px;flex:none;border-radius:9px;background:var(--surface-2);color:var(--ink-2);font-size:12px}
 /* Barras verticales apiladas: día tipo y día de la semana. */
 .hourbars{display:flex;align-items:flex-end;gap:2px;height:132px;margin-top:12px}
@@ -162,6 +163,10 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .btn.primary{background:var(--accent);color:var(--accent-ink)}
 .btn.danger{background:var(--danger-soft);color:var(--danger)}
 .btn.stop{background:var(--ink);color:var(--bg);width:100%}
+.stoprow{gap:8px;flex-wrap:nowrap}
+.stoprow .btn.stop{flex:1;width:auto;min-width:0}
+.btn.discard{flex:none;padding:0 14px;font-size:13px;color:var(--ink-3)}
+.btn.discard:active{color:var(--danger);border-color:var(--danger)}
 .btn.ghost{border:1px solid var(--line);background:transparent}
 .btn.sm{height:38px;padding:0 14px;font-size:13px;border-radius:10px}
 .btn:active{filter:brightness(.92)}
@@ -834,7 +839,7 @@ function viewHoy(){
         </div>
       </div>
       <div class="hint"><span>Corrige el inicio si lo pulsaste tarde; ajusta el fin y pulsa el botón para cerrarla a esa hora.</span>${(()=>{const p=prevEntry(r);return p&&r.start-endOf(p)>MIN?`<button class="linkbtn" data-act="join-prev">Empalmar con la anterior (${fmtTime(endOf(p))})</button>`:'';})()}</div>
-      <button class="btn stop" data-act="stop">${state.pendEnd!=null?'Finalizar a las '+fmtTime(state.pendEnd):'Finalizar ahora'}</button>
+      <div class="row stoprow"><button class="btn stop" data-act="stop">${state.pendEnd!=null?'Finalizar a las '+fmtTime(state.pendEnd):'Finalizar ahora'}</button><button class="btn ghost discard" data-act="discard" aria-label="Descartar registro" title="Descartar registro">Descartar</button></div>
     </div>`
   :`<div class="card now-panel"><div class="now-head"><span class="idle">Nada en marcha. Toca una categoría para empezar a contar.</span></div>
      ${(()=>{const last=[...data.entries].sort((a,b)=>endOf(b)-endOf(a))[0];
@@ -1517,6 +1522,8 @@ document.addEventListener('click',ev=>{
   if(d.icon!=null&&state.sheet==='cat'){state.catEdit.icon=d.icon;$('#catIcon').value=d.icon;document.querySelectorAll('.iconpick button').forEach(b=>b.classList.toggle('on',b.dataset.icon===d.icon));return;}
   switch(d.act){
     case 'stop': stopRunningAt(pendEnd()); break;
+    case 'discard': {const r=running(); if(!r||!confirm('¿Descartar este registro de '+catById(r.cat).name+'? No se guardará nada.')) return;
+      data.entries=data.entries.filter(e=>e!==r); state.pendEnd=null; save(); render(); toast('Registro descartado'); break;}
     case 'startfrom': state.startFrom=+d.ms; render(); break;
     case 'resume-continue': {const rs=state.resume,last=data.entries.find(e=>e.id===rs.id); if(last){last.end=null;} closeSheet(); save(); render(); break;}
     case 'resume-gap': {const rs=state.resume; data.entries.push({id:uid(),cat:rs.cat,start:rs.now,end:null}); sortEntries(); closeSheet(); save(); render(); break;}
@@ -1637,7 +1644,7 @@ document.addEventListener('pointerdown',ev=>{
   lp.fired=false; lp.x=ev.clientX; lp.y=ev.clientY;
   lp.el=chip; chip.classList.add('lp'); requestAnimationFrame(()=>{if(lp.el===chip)chip.classList.add('holding');});
   lp.timer=setTimeout(()=>{lp.fired=true; if(navigator.vibrate) navigator.vibrate(15);
-    lpClear();
+    lpClear(); chip.classList.add('lpfired'); chip.addEventListener('animationend',()=>chip.classList.remove('lpfired'),{once:true});
     const kind=chip.dataset.bal?'balance':chip.dataset.mark?'mark':'cat';
     const o=kind==='balance'?balById(chip.dataset.bal):kind==='mark'?markById(chip.dataset.mark):catById(chip.dataset.start);
     state.catEdit={kind,id:o.id,name:o.name,color:o.color,icon:o.icon||''};
