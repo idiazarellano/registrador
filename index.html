@@ -779,7 +779,11 @@ function dayMarksHTML(ds,col){
   if(!col.ms.length) return '';
   return `<span class="dmarks ${col.icons?'icons':''}" style="width:${col.w}px" aria-label="Marcas: ${esc(col.ms.filter(m=>isMarked(m.id,ds)).map(m=>m.name).join(', ')||'ninguna')}">${col.ms.map(m=>`<i class="${isMarked(m.id,ds)?'':'off'}" style="--mc:${m.color}" title="${esc(m.name)}">${col.icons?m.icon:''}</i>`).join('')}</span>`;
 }
-function dayRowStyle(col){return col.w?`style="grid-template-columns:56px 1fr ${col.w}px 44px"`:'';}
+// noHours: sin la columna de horas registradas (Registros), para que la barra no se estreche.
+function dayRowStyle(col,noHours){
+  if(noHours) return `style="grid-template-columns:56px 1fr${col.w?' '+col.w+'px':''}"`;
+  return col.w?`style="grid-template-columns:56px 1fr ${col.w}px 44px"`:'';
+}
 function marksLegendHTML(col){
   return col.ms.length?`<div class="legend" style="margin-top:6px">${col.ms.map(m=>`<span><span class="dmarks ${col.icons?'icons':''}"><i style="--mc:${m.color}">${col.icons?m.icon:''}</i></span>${esc(m.name)}</span>`).join('')}</div>`:'';
 }
@@ -995,8 +999,8 @@ function viewRegistros(){
       <div class="section-head"><h2>Elige un día</h2><span class="label">0 → 24 h</span></div>
       <div class="dayrows" style="margin-top:10px">${days.map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
-        return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''}" data-day="${ds}" ${dayRowStyle(mc)}><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}<span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
-      <div class="ticks" style="padding-left:66px;padding-right:${mc.w?mc.w+64:62}px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+        return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''}" data-day="${ds}" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
+      <div class="ticks" style="padding-left:66px;padding-right:${mc.w?mc.w+16:6}px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
       <div class="legend" style="margin-top:10px">${data.categories.filter(c=>shown.has(c.id)).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>
       ${marksLegendHTML(mc)}
     </section>
@@ -1081,7 +1085,7 @@ function statsResumen(statDays,n){
       <div class="section-head"><h2>Día a día</h2><span class="label">toca para editarlo</span></div>
       <div class="dayrows" style="margin-top:10px">${statDays.slice().reverse().map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
-        return `<button class="dayrow ${isRest(ds)?'rest':''}" data-day="${ds}" data-goto="registros" ${dayRowStyle(mc)}><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}<span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
+        return `<button class="dayrow ${isRest(ds)?'rest':''}" data-day="${ds}" data-goto="registros" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
       ${marksLegendHTML(mc)}
     </section>`;
 }
