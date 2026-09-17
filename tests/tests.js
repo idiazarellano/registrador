@@ -293,7 +293,7 @@ chk('migrate limpia grupo inexistente', ()=>migrate({schema:4,categories:[{id:'a
 state.level='group';
 chk('periodTotals por grupo', ()=>{const t=periodTotals([y]);return t.m.get('g1')===3*H&&t.m.get('__none')===H;});
 for(const a of ['resumen','diatipo','semana','progresion','tipos','huecos']){ chk('stats '+a, ()=>{state.analysis=a;state.view='stats';render();return true;}); }
-chk('diatipo grupo', ()=>{state.dayCat='g1';return statsDiaTipo([y]).includes('Trabajo, hora a hora');});
+chk('diatipo grupo', ()=>{state.dayCat='g1';return statsDiaTipo([y]).includes('hora a hora')&&statsDiaTipo([y]).includes('Trabajo ▾');});
 state.dayFilter='all'; chk('stats todos', ()=>{render();return true;});
 state.level='cat'; state.dayCat=null;
 chk('ajustes', ()=>viewAjustes().includes('Supercategorías')&&viewAjustes().includes('class="gbar" style="background:#2a78d6"'));
@@ -316,4 +316,12 @@ const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
 const y=dayStart(Date.now()-86400000);
 state.level='group'; chk('día a día pinta supercategorías', statsResumen([y],1).includes('background:#2a78d6'));
 state.level='cat';
+})();
+
+;(function(){
+const chk=(n,f)=>{try{print((f()?'OK  ':'FAIL')+' '+n);}catch(e){print('FAIL '+n+' '+e.message)}};
+state.view='stats'; state.analysis='progresion';
+chk('datos: dos filas arriba', ()=>{const h=viewStats();return h.includes('class="atabs"')&&h.includes('26 semanas · Laborables')&&!h.includes('data-range=');});
+for(const sh of ['statfilters','unitpick']){ state.unitFor='statcat'; state.sheet=sh; chk('hoja '+sh, ()=>{renderSheet();return true;}); }
+state.sheet=null; state.analysis='resumen';
 })();
