@@ -130,6 +130,9 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .atabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .statrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .periodsel select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 28px 7px 12px;font-size:13px;font-weight:700;color:var(--ink);background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.duo{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:2px}
+.duo button{padding:5px 10px;border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-3)}
+.duo button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
 .toggle{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:700;color:var(--ink-3)}
 .toggle[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .unitbtn{padding:5px 10px;border-radius:999px;background:var(--surface-2);font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap;max-width:50%;overflow:hidden;text-overflow:ellipsis}
@@ -685,6 +688,11 @@ function importJSON(text,mode){
 /* ============ Interfaz ============ */
 const RESUME_WINDOW=HOUR; // misma categoría dentro de esta ventana: se ofrece unir
 const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,pendEnd:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[],analysis:'resumen',statCat:null,weeks:26,dayCat:null,level:'cat',dayFilter:'work'};
+/* Lo elegido en Datos se recuerda en este dispositivo. Va en una clave aparte y no en `data`,
+   para que cambiar de vista no cuente como un cambio pendiente de copia de seguridad. */
+const KEY_VIEW='registrador.v1.view', VIEW_PREFS=['range','weeks','dayFilter','level','dayCat','statCat','analysis'];
+try{ const v=JSON.parse(localStorage.getItem(KEY_VIEW)||'{}'); for(const k of VIEW_PREFS) if(v[k]!==undefined) state[k]=v[k]; }catch(_){}
+function saveViewPrefs(){ try{ const v={}; for(const k of VIEW_PREFS) v[k]=state[k]; localStorage.setItem(KEY_VIEW,JSON.stringify(v)); }catch(_){} }
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let toastTimer;
@@ -1087,6 +1095,7 @@ function statsResumen(statDays,n){
         <span class="sub num">${workDays.length&&perCat(r.c.id,workDays)?`media ${fmtDur(perCat(r.c.id,workDays)/workDays.length)} por día`:''}${prev.s?' · ':''}${prev.s?deltaHTML(r.ms,r.prev):''}</span></div>`).join('')+unassignedRowHTML(statDays.reduce((a,ds)=>a+unassignedOfDay(ds,state.dayFilter==='all'),0),cur.s):'<p class="empty">Sin registros en este periodo.</p>'}
       ${restCount?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:12px">🌴 Incluye ${restCount} ${restCount===1?'día de descanso':'días de descanso'}. Las medias se calculan sobre los ${workDays.length} días con registros.</p>`:''}
       ${prev.s?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:8px">▲▼ comparado con los ${n} días anteriores (${fmtDur(prev.s)} en total).</p>`:''}</div>
+      <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:8px">Del ${fmtDayLong(dayStart(Date.now())-n*DAY).toLowerCase()} al ${fmtDayLong(dayStart(Date.now())-DAY).toLowerCase()}. Hoy no cuenta hasta que termine.</p>
     </section>
     ${statsMarksHTML(statDays)}
     ${statsBalancesHTML(statDays,prevDays)}
@@ -1411,11 +1420,11 @@ function viewStats(){
     <div class="statbars">
       <div class="atabs" role="tablist">${ANALYSES.map(([k,l])=>`<button data-analysis="${k}" aria-pressed="${a===k}" ${a===k?'id="atab-on"':''}>${l}</button>`).join('')}</div>
       <div class="statrow">
-        <label class="periodsel"><select id="periodSel" data-period="${prog?'weeks':'range'}" aria-label="Periodo">${opts.map(([k,l,on])=>`<option value="${k}" ${on?'selected':''}>${l}</option>`).join('')}</select></label>
+        <label class="periodsel" title="${prog?'La semana en curso no cuenta hasta que termine.':`${fmtDayLong(allDays[n-1])} → ${fmtDayLong(allDays[0])}. Hoy no cuenta hasta que termine.`}"><select id="periodSel" data-period="${prog?'weeks':'range'}" aria-label="Periodo">${opts.map(([k,l,on])=>`<option value="${k}" ${on?'selected':''}>${l}</option>`).join('')}</select></label>
         <button class="toggle" data-act="toggle-rest" aria-pressed="${state.dayFilter==='all'}" title="${state.dayFilter==='all'?'Se cuentan también los días de descanso':'Solo días laborables'}">🌴 Con descanso</button>
-        ${data.groups.length?`<button class="toggle" data-act="toggle-level" aria-pressed="${byGroup()}">Supercategorías</button>`:''}
+        ${data.groups.length?`<span class="duo" role="group" aria-label="Ver por">${[['cat','Categorías'],['group','Supercat.']].map(([k,l])=>`<button data-level="${k}" aria-pressed="${state.level===k}">${l}</button>`).join('')}</span>`:''}
       </div>
-      ${prog?'':`<p class="sub" style="font-size:12px;color:var(--ink-3);margin:0 2px">${fmtDayLong(allDays[n-1])} → ${fmtDayLong(allDays[0])}. Hoy no cuenta hasta que termine.</p>`}
+
     </div>
     ${a==='resumen'?statsResumen(statDays,n):a==='diatipo'?statsDiaTipo(statDays):a==='semana'?statsSemana(statDays):a==='tipos'?statsTipos(statDays):a==='huecos'?statsHuecos(statDays):statsProgresion()}`;
 }
@@ -1490,6 +1499,7 @@ function render(){
   const today=dayStart(Date.now());
   if(state.today!==today){ if(state.today!=null) state.selDay=today; state.today=today; }
   const v=$('#view');
+  if(state.view==='stats') saveViewPrefs();
   v.innerHTML={hoy:viewHoy,tareas:viewTareas,registros:viewRegistros,stats:viewStats,ajustes:viewAjustes}[state.view]();
   renderTabs(); renderSheet();
 }
@@ -1717,6 +1727,7 @@ document.addEventListener('click',ev=>{
   if(d.statcat){state.statCat=d.statcat;state.sheet=null;render();return;}
   if(d.daycat!=null){state.dayCat=d.daycat||null;state.sheet=null;render();return;}
   if(d.weeks){state.weeks=+d.weeks;render();return;}
+  if(d.level){ if(state.level!==d.level){state.level=d.level;state.dayCat=null;state.statCat=null;} render(); return; }
   if(d.day){state.selDay=dayStart(+d.day);render();return;}
   if(d.cat){openKindEdit(undefined,d.cat);return;}
   if(d.theme){data.settings.theme=d.theme;save();render();return;}
@@ -1752,7 +1763,7 @@ document.addEventListener('click',ev=>{
       data.balanceLog=data.balanceLog.filter(x=>x.bid!==id);
       save(); closeSheet(); render(); break; }
     case 'toggle-rest': state.dayFilter=state.dayFilter==='all'?'work':'all'; render(); break;
-    case 'toggle-level': state.level=byGroup()?'cat':'group'; state.dayCat=null; state.statCat=null; render(); break;
+
     case 'unit-pick': state.unitFor=d.for; state.sheet='unitpick'; renderSheet(); break;
     case 'new-group': state.catEdit={kind:'group',id:null,name:'',color:PALETTE.find(h=>!data.groups.some(g=>g.color===h))||PALETTE[0],icon:'',cats:[]};state.sheet='cat';renderSheet(); break;
     case 'new-group-from-cat': {
