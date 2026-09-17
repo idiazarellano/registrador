@@ -128,8 +128,10 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .atabs::-webkit-scrollbar{display:none}
 .atabs button{flex:none;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-2);background:var(--surface-2)}
 .atabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.statsum{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border-radius:12px;background:var(--surface);font-size:13px;font-weight:700;color:var(--ink-2);text-align:left}
-.statsum .chev{color:var(--ink-3)}
+.statrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.periodsel select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 28px 7px 12px;font-size:13px;font-weight:700;color:var(--ink);background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.toggle{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:700;color:var(--ink-3)}
+.toggle[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .unitbtn{padding:5px 10px;border-radius:999px;background:var(--surface-2);font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap;max-width:50%;overflow:hidden;text-overflow:ellipsis}
 .seg-control.small button{flex:1 1 28%;font-size:12px;padding:7px 2px}
 /* Tipos de día: agrupación y mapa. */
@@ -1403,12 +1405,17 @@ function viewStats(){
   const today=dayStart(Date.now()), n=state.range, a=state.analysis;
   const allDays=[]; for(let i=1;i<=n;i++) allDays.push(dayStart(today-i*DAY+HOUR*12));
   const statDays=filterDays(allDays.slice());
-  const lvl=data.groups.length?` · ${byGroup()?'Supercategorías':'Categorías'}`:'';
-  const summary=(a==='progresion'?`${state.weeks} semanas`:`${n} días`)+` · ${state.dayFilter==='work'?'Laborables':'Todos'}`+lvl;
+  const prog=a==='progresion';
+  const opts=prog?[12,26,52].map(k=>[k,k+' semanas',state.weeks===k]):[7,14,30,90].map(k=>[k,k+' días',n===k]);
   return `<div class="topbar"><h1>Datos</h1>${gearBtn}</div>
     <div class="statbars">
       <div class="atabs" role="tablist">${ANALYSES.map(([k,l])=>`<button data-analysis="${k}" aria-pressed="${a===k}" ${a===k?'id="atab-on"':''}>${l}</button>`).join('')}</div>
-      <button class="statsum" data-act="stat-filters"><span class="grow">${summary}</span><span class="chev">▾</span></button>
+      <div class="statrow">
+        <label class="periodsel"><select id="periodSel" data-period="${prog?'weeks':'range'}" aria-label="Periodo">${opts.map(([k,l,on])=>`<option value="${k}" ${on?'selected':''}>${l}</option>`).join('')}</select></label>
+        <button class="toggle" data-act="toggle-rest" aria-pressed="${state.dayFilter==='all'}" title="${state.dayFilter==='all'?'Se cuentan también los días de descanso':'Solo días laborables'}">🌴 Con descanso</button>
+        ${data.groups.length?`<button class="toggle" data-act="toggle-level" aria-pressed="${byGroup()}">Supercategorías</button>`:''}
+      </div>
+      ${prog?'':`<p class="sub" style="font-size:12px;color:var(--ink-3);margin:0 2px">${fmtDayLong(allDays[n-1])} → ${fmtDayLong(allDays[0])}. Hoy no cuenta hasta que termine.</p>`}
     </div>
     ${a==='resumen'?statsResumen(statDays,n):a==='diatipo'?statsDiaTipo(statDays):a==='semana'?statsSemana(statDays):a==='tipos'?statsTipos(statDays):a==='huecos'?statsHuecos(statDays):statsProgresion()}`;
 }
@@ -1661,19 +1668,6 @@ function renderSheet(){
       <div class="field"><div class="label">Escribe BORRAR para confirmar</div><input class="confirm-input" id="confirmInput" autocomplete="off" autocapitalize="characters" placeholder="BORRAR"></div>
       <div class="row end"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm danger" data-act="nuke-go">Borrar todo</button></div></div></div>`;
     setTimeout(()=>{const i=$('#confirmInput');if(i)i.focus();},50);
-  } else if(state.sheet==='statfilters'){
-    const n=state.range, today=dayStart(Date.now()), prog=state.analysis==='progresion';
-    o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Qué se analiza">
-      <div class="handle"></div><h2>Qué se analiza</h2>
-      <div class="field"><div class="label">Periodo</div>${prog
-        ?`<div class="seg-control">${[12,26,52].map(k=>`<button data-weeks="${k}" aria-pressed="${state.weeks===k}">${k} semanas</button>`).join('')}</div>`
-        :`<div class="seg-control">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${n===k}">${k} días</button>`).join('')}</div>
-          <p class="desc" style="margin:0;font-size:12px;color:var(--ink-3)">${fmtDayLong(today-n*DAY)} → ${fmtDayLong(today-DAY)}. Hoy no cuenta hasta que termine.</p>`}</div>
-      <div class="field"><div class="label">Días</div><div class="seg-control">${[['work','Laborables'],['all','Todos']].map(([k,l])=>`<button data-dayfilter="${k}" aria-pressed="${state.dayFilter===k}">${l}</button>`).join('')}</div>
-        <p class="desc" style="margin:0;font-size:12px;color:var(--ink-3)">${state.dayFilter==='work'?'Sin los días de descanso 🌴.':'Con los días de descanso 🌴.'}</p></div>
-      ${data.groups.length?`<div class="field"><div class="label">Ver por</div><div class="seg-control">${[['cat','Categorías'],['group','Supercategorías']].map(([k,l])=>`<button data-level="${k}" aria-pressed="${state.level===k}">${l}</button>`).join('')}</div></div>`:''}
-      <div class="sheet-actions"><button class="btn sm primary" data-close>Listo</button></div>
-    </div></div>`;
   } else if(state.sheet==='unitpick'){
     const attr=state.unitFor, sel=attr==='daycat'?state.dayCat:statCat();
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Elegir">
@@ -1721,8 +1715,6 @@ document.addEventListener('click',ev=>{
   if(d.range){state.range=+d.range;render();return;}
   if(d.analysis){state.analysis=d.analysis;render();const on=$('#atab-on');if(on&&on.scrollIntoView)on.scrollIntoView({inline:'nearest',block:'nearest'});return;}
   if(d.statcat){state.statCat=d.statcat;state.sheet=null;render();return;}
-  if(d.level){ if(state.level!==d.level){state.level=d.level;state.dayCat=null;state.statCat=null;} render();return;}
-  if(d.dayfilter){state.dayFilter=d.dayfilter;render();return;}
   if(d.daycat!=null){state.dayCat=d.daycat||null;state.sheet=null;render();return;}
   if(d.weeks){state.weeks=+d.weeks;render();return;}
   if(d.day){state.selDay=dayStart(+d.day);render();return;}
@@ -1759,7 +1751,8 @@ document.addEventListener('click',ev=>{
       data.balances=data.balances.filter(b=>b.id!==id);
       data.balanceLog=data.balanceLog.filter(x=>x.bid!==id);
       save(); closeSheet(); render(); break; }
-    case 'stat-filters': state.sheet='statfilters'; renderSheet(); break;
+    case 'toggle-rest': state.dayFilter=state.dayFilter==='all'?'work':'all'; render(); break;
+    case 'toggle-level': state.level=byGroup()?'cat':'group'; state.dayCat=null; state.statCat=null; render(); break;
     case 'unit-pick': state.unitFor=d.for; state.sheet='unitpick'; renderSheet(); break;
     case 'new-group': state.catEdit={kind:'group',id:null,name:'',color:PALETTE.find(h=>!data.groups.some(g=>g.color===h))||PALETTE[0],icon:'',cats:[]};state.sheet='cat';renderSheet(); break;
     case 'new-group-from-cat': {
@@ -1888,6 +1881,7 @@ document.addEventListener('change',ev=>{
     if(f==='start'){ if(setRunningStart(ms)) render(); } else setPendEnd(ms);
     return;
   }
+  if(t.id==='periodSel'){ state[t.dataset.period]=+t.value; render(); return; }
   if(t.id==='catColor'&&state.catEdit){
     state.catEdit.color=t.value; document.querySelectorAll('.swatches button').forEach(b=>b.classList.remove('on'));
     const l=$('#ownColor'); l.classList.add('on'); l.style.background=t.value; l.querySelector('span').textContent=''; return;

@@ -321,7 +321,7 @@ state.level='cat';
 ;(function(){
 const chk=(n,f)=>{try{print((f()?'OK  ':'FAIL')+' '+n);}catch(e){print('FAIL '+n+' '+e.message)}};
 state.view='stats'; state.analysis='progresion';
-chk('datos: dos filas arriba', ()=>{const h=viewStats();return h.includes('class="atabs"')&&h.includes('26 semanas · Laborables')&&!h.includes('data-range=');});
-for(const sh of ['statfilters','unitpick']){ state.unitFor='statcat'; state.sheet=sh; chk('hoja '+sh, ()=>{renderSheet();return true;}); }
+chk('datos: dos filas arriba', ()=>{const h=viewStats();return h.includes('class="atabs"')&&h.includes('<option value="26" selected>26 semanas')&&h.includes('data-act="toggle-rest" aria-pressed="false"')&&!h.includes('data-range=');});
+for(const sh of ['unitpick']){ state.unitFor='statcat'; state.sheet=sh; chk('hoja '+sh, ()=>{renderSheet();return true;}); }
 state.sheet=null; state.analysis='resumen';
 })();
