@@ -128,11 +128,12 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .atabs::-webkit-scrollbar{display:none}
 .atabs button{flex:none;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-2);background:var(--surface-2)}
 .atabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.statrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.statrow{display:flex;gap:6px;align-items:center}
+.statrow .toggle,.periodsel select{height:34px;padding-top:0;padding-bottom:0;white-space:nowrap}
 .periodsel select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 28px 7px 12px;font-size:13px;font-weight:700;color:var(--ink);background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
-.duo{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:2px}
-.duo button{padding:5px 10px;border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-3)}
-.duo button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+/* Categorías / Supercategorías apiladas en un solo botón: las dos palabras a la vista, la activa resaltada. */
+.stack{display:inline-flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:2px 12px;border:1px solid var(--line);border-radius:12px;line-height:1.15;font-size:10.5px;font-weight:600;color:var(--ink-3);height:34px}
+.stack span.on{color:var(--accent);font-weight:800}
 .toggle{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:700;color:var(--ink-3)}
 .toggle[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .unitbtn{padding:5px 10px;border-radius:999px;background:var(--surface-2);font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap;max-width:50%;overflow:hidden;text-overflow:ellipsis}
@@ -1421,8 +1422,8 @@ function viewStats(){
       <div class="atabs" role="tablist">${ANALYSES.map(([k,l])=>`<button data-analysis="${k}" aria-pressed="${a===k}" ${a===k?'id="atab-on"':''}>${l}</button>`).join('')}</div>
       <div class="statrow">
         <label class="periodsel" title="${prog?'La semana en curso no cuenta hasta que termine.':`${fmtDayLong(allDays[n-1])} → ${fmtDayLong(allDays[0])}. Hoy no cuenta hasta que termine.`}"><select id="periodSel" data-period="${prog?'weeks':'range'}" aria-label="Periodo">${opts.map(([k,l,on])=>`<option value="${k}" ${on?'selected':''}>${l}</option>`).join('')}</select></label>
-        <button class="toggle" data-act="toggle-rest" aria-pressed="${state.dayFilter==='all'}" title="${state.dayFilter==='all'?'Se cuentan también los días de descanso':'Solo días laborables'}">🌴 Con descanso</button>
-        ${data.groups.length?`<span class="duo" role="group" aria-label="Ver por">${[['cat','Categorías'],['group','Supercat.']].map(([k,l])=>`<button data-level="${k}" aria-pressed="${state.level===k}">${l}</button>`).join('')}</span>`:''}
+        <button class="toggle" data-act="toggle-rest" aria-pressed="${state.dayFilter==='all'}" title="${state.dayFilter==='all'?'Se cuentan también los días de descanso':'Solo días laborables'}">🌴 Descanso</button>
+        ${data.groups.length?`<button class="stack" data-level="${byGroup()?'cat':'group'}" aria-label="Ver por ${byGroup()?'supercategorías':'categorías'}; toca para cambiar">${[['cat','Categorías'],['group','Supercategorías']].map(([k,l])=>`<span class="${state.level===k?'on':''}">${l}</span>`).join('')}</button>`:''}
       </div>
 
     </div>
