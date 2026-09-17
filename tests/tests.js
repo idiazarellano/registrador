@@ -296,8 +296,8 @@ for(const a of ['resumen','diatipo','semana','progresion','tipos','huecos']){ ch
 chk('diatipo grupo', ()=>{state.dayCat='g1';return statsDiaTipo([y]).includes('Trabajo, hora a hora');});
 state.dayFilter='all'; chk('stats todos', ()=>{render();return true;});
 state.level='cat'; state.dayCat=null;
-chk('ajustes', ()=>viewAjustes().includes('Supercategorías')&&viewAjustes().includes('groups-hoy'));
-chk('hoy rayita', ()=>viewHoy().includes('inset 4px 0 0 #2a78d6'));
+chk('ajustes', ()=>viewAjustes().includes('Supercategorías')&&viewAjustes().includes('class="gbar" style="background:#2a78d6"'));
+chk('hoy sin supercategorías', ()=>!viewHoy().includes('#2a78d6" title="Trabajo'));
 openKindEdit('group','g1'); chk('hoja grupo', ()=>state.catEdit.cats.length===2);
 openKindEdit(undefined,'c1'); chk('hoja cat', ()=>state.catEdit.group==='g1');
 })();

@@ -311,6 +311,7 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .list .chev{color:var(--ink-3)}
 .list .catrow{padding:4px 0}
 .list .catrow > button.grow{display:flex;align-items:center;gap:12px;padding:8px 0;text-align:left}
+.gbar{width:4px;align-self:stretch;border-radius:2px;flex:none;margin-right:-4px}
 .list .mv{width:36px;height:36px;border-radius:8px;background:var(--surface-2);font-size:11px;color:var(--ink-2);flex:none}
 .list .mv:disabled{opacity:.3}
 .banner{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--accent-soft);font-size:13px}
@@ -390,7 +391,7 @@ function defaultData(){
     ratings:[],    // valoraciones del día de 1 a 5: {id,name,icon,color,archived}
     ratingDays:{}, // 'AAAA-MM-DD' -> {id de valoración: 1..5}
     groups:[],     // supercategorías: {id,name,icon,color}; cada categoría apunta a una con `group` (o null)
-    settings:{backupMode:'auto',theme:'system',granularity:5,groupsInHoy:true},
+    settings:{backupMode:'auto',theme:'system',granularity:5},
     meta:{created:Date.now(),updated:Date.now(),lastBackup:0,lastBackupUpdated:0}};
 }
 function migrate(d){
@@ -410,7 +411,7 @@ function migrate(d){
   for(const g of d.groups){ if(g.icon==null) g.icon=''; }
   for(const b of d.balances){ if(b.icon==null) b.icon=''; if(b.archived==null) b.archived=false;
     b.a=Object.assign({label:'A'},b.a||{}); b.b=Object.assign({label:'B'},b.b||{}); }
-  d.settings=Object.assign({backupMode:'auto',theme:'system',granularity:5,groupsInHoy:true},d.settings||{});
+  d.settings=Object.assign({backupMode:'auto',theme:'system',granularity:5},d.settings||{});
   for(const c of d.categories){ if(c.icon==null) c.icon=''; if(c.archived==null) c.archived=false;
     if(c.group===undefined||(c.group!=null&&!d.groups.some(g=>g.id===c.group))) c.group=null; }
   d.meta=Object.assign({created:Date.now(),updated:0,lastBackup:0,lastBackupUpdated:0},d.meta||{});
@@ -420,6 +421,7 @@ function migrate(d){
   if(!['auto','ask','off'].includes(d.settings.backupMode)) d.settings.backupMode='auto';
   if(d.schema<3){ d.schema=3; } // v3: marcas (eventos sí/no) y tareas; campos nuevos, nada que convertir
   if(d.schema<4){ d.schema=4; } // v4: balanzas (ocasiones de dos salidas); campos nuevos, nada que convertir
+  delete d.settings.groupsInHoy; // probado y descartado: las supercategorías no se ven en Hoy
   if(d.schema<5){ d.schema=5; } // v5: supercategorías; los registros no cambian, solo categoria.group
   // futuras versiones: if(d.schema<6){ ... d.schema=6; }
   d.schema=SCHEMA;
@@ -974,7 +976,7 @@ function viewHoy(){
     <div>${dayBarHTML(ds)}</div>
     ${nowPanel}
     <div class="section-head"><h2>Categorías</h2><button class="linkbtn" data-act="edit-cats">Editar</button></div>
-    <div class="catgrid">${activeCats().map(c=>`<button class="chip ${r&&r.cat===c.id?'on':''}" data-start="${c.id}" ${data.settings.groupsInHoy&&groupOfCat(c.id)!=='__none'?`style="box-shadow:inset 4px 0 0 ${groupById(c.group).color}" title="${esc(groupById(c.group).name)}"`:''}>${iconOrDot(c)}<span class="name">${esc(c.name)}</span>${tot.get(c.id)?`<span class="tot num">${fmtDur(tot.get(c.id))}</span>`:''}</button>`).join('')}
+    <div class="catgrid">${activeCats().map(c=>`<button class="chip ${r&&r.cat===c.id?'on':''}" data-start="${c.id}">${iconOrDot(c)}<span class="name">${esc(c.name)}</span>${tot.get(c.id)?`<span class="tot num">${fmtDur(tot.get(c.id))}</span>`:''}</button>`).join('')}
       <button class="chip add" data-act="new-cat">+ Categoría</button></div>
     <div class="section-head"><h2>Marcas</h2><button class="linkbtn" data-act="new-mark">+ Marca</button></div>
     ${activeMarks().length?marksRowHTML(ds):'<p class="empty" style="margin:0">Cosas de sí o no: «he leído», «he tomado la pastilla». Sin horas.</p>'}
@@ -996,7 +998,7 @@ function viewRegistros(){
   const mc=dayMarksCol();
   return `<div class="topbar"><h1>Registros</h1>${gearBtn}</div>
     <section class="card">
-      <div class="section-head"><h2>Elige un día</h2><span class="label">0 → 24 h</span></div>
+      <div class="section-head"><h2>Elige un día</h2></div>
       <div class="dayrows" style="margin-top:10px">${days.map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
         return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''}" data-day="${ds}" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
@@ -1415,6 +1417,11 @@ function viewStats(){
    ▲▼ para ordenar (el orden es el de Hoy y Registros) y archivar sin perder lo apuntado. */
 const KIND_LIST={mark:'marks',balance:'balances',rating:'ratings',group:'groups'};
 const KIND_ACT={mark:'new-mark',balance:'new-balance',rating:'new-rating',group:'new-group'};
+function groupBarHTML(c){ // solo si hay supercategorías; sin grupo, hueco para que todo quede alineado
+  if(!data.groups.length) return '';
+  const g=groupOfCat(c.id);
+  return `<span class="gbar" style="background:${g==='__none'?'transparent':groupById(g).color}" title="${esc(groupById(g).name)}"></span>`;
+}
 function kindListHTML(kind,title,desc,addLabel){
   const all=data[KIND_LIST[kind]], act=all.filter(x=>!x.archived), arch=all.filter(x=>x.archived);
   const row=(x,extra)=>`<div class="catrow"><button data-kedit="${x.id}" data-kind="${kind}" class="grow" ${x.archived?'style="opacity:.7"':''}>${iconOrDot(x)}<span class="grow">${esc(x.name)}${kind==='balance'?`<br><span class="desc">${esc(x.a.label)} · ${esc(x.b.label)}</span>`:kind==='group'?`<br><span class="desc">${esc(data.categories.filter(c=>c.group===x.id).map(c=>c.name).join(' · ')||'sin categorías')}</span>`:''}</span></button>${extra}</div>`;
@@ -1437,11 +1444,10 @@ function viewAjustes(){
   const s=data.settings;
   return `<div class="topbar"><button class="iconbtn" data-view="${state.prevView}" aria-label="Volver">‹</button><h1>Ajustes</h1></div>
     <section class="card"><div class="label" style="margin-bottom:6px">Categorías</div>
-      <div class="list">${activeCats().map((c,i,arr)=>`<div class="catrow"><button data-cat="${c.id}" class="grow">${iconOrDot(c)}<span class="grow">${esc(c.name)}</span></button><button class="mv" data-move="${c.id}" data-dir="-1" aria-label="Subir" ${i===0?'disabled':''}>▲</button><button class="mv" data-move="${c.id}" data-dir="1" aria-label="Bajar" ${i===arr.length-1?'disabled':''}>▼</button></div>`).join('')}
+      <div class="list">${activeCats().map((c,i,arr)=>`<div class="catrow"><button data-cat="${c.id}" class="grow">${groupBarHTML(c)}${iconOrDot(c)}<span class="grow">${esc(c.name)}</span></button><button class="mv" data-move="${c.id}" data-dir="-1" aria-label="Subir" ${i===0?'disabled':''}>▲</button><button class="mv" data-move="${c.id}" data-dir="1" aria-label="Bajar" ${i===arr.length-1?'disabled':''}>▼</button></div>`).join('')}
       <button data-act="new-cat"><span class="dot" style="border:2px dashed var(--line)"></span><span class="grow" style="color:var(--accent);font-weight:700">Nueva categoría</span></button></div>
-      ${data.categories.some(c=>c.archived)?`<div class="label" style="margin:14px 0 6px">Archivadas</div><div class="list">${data.categories.filter(c=>c.archived).map(c=>`<div class="catrow"><button data-cat="${c.id}" class="grow" style="opacity:.7">${iconOrDot(c)}<span class="grow">${esc(c.name)}</span></button><button class="linkbtn" data-unarchive="${c.id}">Restaurar</button></div>`).join('')}</div>`:''}</section>
+      ${data.categories.some(c=>c.archived)?`<div class="label" style="margin:14px 0 6px">Archivadas</div><div class="list">${data.categories.filter(c=>c.archived).map(c=>`<div class="catrow"><button data-cat="${c.id}" class="grow" style="opacity:.7">${groupBarHTML(c)}${iconOrDot(c)}<span class="grow">${esc(c.name)}</span></button><button class="linkbtn" data-unarchive="${c.id}">Restaurar</button></div>`).join('')}</div>`:''}</section>
     ${kindListHTML('group','Supercategorías','Agrupan categorías para analizar con menos detalle («Trabajo», «Familia»). Los registros no cambian: en Datos se elige ver por categoría o por supercategoría.','Nueva supercategoría')}
-    ${data.groups.length?`<section class="card"><div class="list"><button data-act="groups-hoy"><span class="grow">Mostrar en Hoy<br><span class="desc">Una rayita del color de la supercategoría en el borde de cada categoría.</span></span><span class="restbtn ${data.settings.groupsInHoy?'on':''}">${data.settings.groupsInHoy?'Sí':'No'}</span></button></div></section>`:''}
     ${kindListHTML('mark','Marcas','Eventos de sí o no, uno por día. Aparecen en Hoy debajo de las categorías.','Nueva marca')}
     ${kindListHTML('balance','Balanzas','Ocasiones con dos salidas excluyentes, contadas tantas veces como pasen. Aparecen en Hoy debajo de las marcas.','Nueva balanza')}
     ${kindListHTML('rating','Valoraciones','Una nota del 1 al 5 por día. Aparecen en Hoy debajo de las balanzas.','Nueva valoración')}
@@ -1746,7 +1752,6 @@ document.addEventListener('click',ev=>{
       data.groups=data.groups.filter(g=>g.id!==id);
       for(const c of data.categories) if(c.group===id) c.group=null;
       save(); closeSheet(); render(); break; }
-    case 'groups-hoy': data.settings.groupsInHoy=!data.settings.groupsInHoy; save(); render(); break;
     case 'new-mark': state.catEdit={kind:'mark',id:null,name:'',color:PALETTE.find(h=>!data.marks.some(m=>m.color===h))||PALETTE[0],icon:''};state.sheet='cat';renderSheet(); break;
     case 'new-rating': state.catEdit={kind:'rating',id:null,name:'',color:PALETTE.find(h=>!data.ratings.some(r=>r.color===h))||PALETTE[0],icon:''};state.sheet='cat';renderSheet(); break;
     case 'rating-delete': {

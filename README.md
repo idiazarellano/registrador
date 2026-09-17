@@ -29,7 +29,7 @@ Un criterio que se puntúa una vez al día: «calidad del sueño», «rendimient
 Agrupan categorías para analizar con menos detalle: «Trabajo» con Programar, Reuniones y Correo; «Familia» con Niños y Comida. Cada categoría está en una sola supercategoría o en ninguna («Sin grupo»), así las horas nunca se cuentan dos veces.
 
 - **Asignar**: desde la ficha de la categoría (selector «Supercategoría», con «+ Nueva») o desde Ajustes → Supercategorías, marcando sus categorías. Si una ya estaba en otra, se cambia de sitio y se avisa.
-- **Hoy**: solo una rayita del color de la supercategoría en el borde de cada categoría. Se quita en Ajustes → «Mostrar en Hoy». Sin supercategorías, Hoy no cambia.
+- **Hoy** no cambia: las supercategorías no se ven ahí. En **Ajustes → Categorías**, cada categoría lleva a la izquierda del icono una rayita con el color de su supercategoría (hueca si no tiene), para ver de un vistazo qué está clasificado y dónde.
 - **Datos**: el interruptor «Categorías / Supercategorías» cambia todos los análisis de nivel. Tareas y Registros siguen siempre por categoría.
 - Los registros no guardan la supercategoría: se deduce al calcular, así mover una categoría de grupo rehace todo el histórico.
 
