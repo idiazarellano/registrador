@@ -52,8 +52,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
 #app{display:flex;flex-direction:column;min-height:100dvh;max-width:640px;margin:0 auto}
-main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
-.tabs{position:sticky;bottom:0;margin-top:auto;display:flex;justify-content:center;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:20}
+main{flex:1;padding:14px 16px calc(80px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:18px}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:20}
 .tabs .inner{display:flex;width:100%;max-width:640px}
 .tabs button{flex:1;padding:10px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--ink-3)}
 .tabs button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
