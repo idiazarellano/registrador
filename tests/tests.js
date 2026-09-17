@@ -330,6 +330,16 @@ const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
 state.view='stats'; state.range=30; state.level='group'; render();
 const v=JSON.parse(storeMap['registrador.v1.view']||'{}');
 chk('Datos recuerda lo elegido', v.range===30&&v.level==='group');
-chk('nivel con las dos palabras', viewStats().includes('<span class="">Categorías</span><span class="on">Supercategorías</span>'));
+chk('nivel con las dos palabras', viewStats().includes('<span class="off" aria-hidden="true">Categorías</span><span class="on" aria-hidden="false">Supercat.</span>'));
 state.range=7; state.level='cat'; state.view='hoy'; render();
+})();
+;(function(){
+const chk=(n,f)=>{try{print((f()?'OK  ':'FAIL')+' '+n);}catch(e){print('FAIL '+n+' '+e.message)}};
+const H=3600000, y=dayStart(Date.now()-5*86400000);
+data.entries.push({id:'h1',cat:'c1',start:y+9*H,end:y+10*H},{id:'h2',cat:'c1',start:y+12*H,end:y+13*H});
+state.level='cat'; state.dayFilter='work';
+chk('huecos en Día', ()=>{const h=statsDiaTipoCat([y],'__gaps');return h.includes('hora a hora')&&unitSpans(y,'__gaps').length===1;});
+chk('huecos en Progreso', ()=>{state.statCat='__gaps';state.weeks=12;return statsProgresion().includes('Huecos ▾');});
+chk('botón Con 🌴', ()=>viewStats().includes('>Con 🌴</button>'));
+state.statCat=null;
 })();

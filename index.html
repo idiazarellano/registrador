@@ -131,9 +131,12 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .statrow{display:flex;gap:6px;align-items:center}
 .statrow .toggle,.periodsel select{height:34px;padding-top:0;padding-bottom:0;white-space:nowrap}
 .periodsel select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 28px 7px 12px;font-size:13px;font-weight:700;color:var(--ink);background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
-/* Categorías / Supercategorías apiladas en un solo botón: las dos palabras a la vista, la activa resaltada. */
-.stack{display:inline-flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:2px 12px;border:1px solid var(--line);border-radius:12px;line-height:1.15;font-size:10.5px;font-weight:600;color:var(--ink-3);height:34px}
-.stack span.on{color:var(--accent);font-weight:800}
+/* Categorías / Supercategorías como un interruptor de dos pastillas superpuestas: la activa delante,
+   la otra asoma por detrás a la derecha. Ocupa poco más que una sola y se ve que hay otra opción. */
+.stack{display:inline-grid;height:34px;padding:0 20px 0 0;flex:none}
+.stack span{grid-area:1/1;display:flex;align-items:center;justify-content:center;padding:0 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:700;white-space:nowrap}
+.stack span.on{z-index:2;background:var(--accent-soft);border-color:var(--accent);color:var(--accent);box-shadow:2px 0 4px rgba(0,0,0,.12)}
+.stack span.off{z-index:1;transform:translateX(20px) scale(.88);background:var(--surface-2);color:var(--ink-3);justify-content:flex-end}
 .toggle{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:700;color:var(--ink-3)}
 .toggle[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .unitbtn{padding:5px 10px;border-radius:999px;background:var(--surface-2);font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap;max-width:50%;overflow:hidden;text-overflow:ellipsis}
@@ -505,7 +508,9 @@ const groupOfCat=catId=>{const c=data.categories.find(x=>x.id===catId);return c&
 // «Unidad» de análisis en Datos: la categoría o su supercategoría, según el interruptor.
 const byGroup=()=>state.level==='group';
 const U=catId=>byGroup()?groupOfCat(catId):catId;
-const unitById=id=>byGroup()?groupById(id):catById(id);
+/* «Huecos» como una unidad más en los selectores de Día y Progreso: el tiempo sin registrar. */
+const GAPS={id:'__gaps',name:'Huecos',color:'#8f8b82',icon:''};
+const unitById=id=>id==='__gaps'?GAPS:byGroup()?groupById(id):catById(id);
 const unitOrder=()=>byGroup()?data.groups.map(g=>g.id).concat('__none'):data.categories.map(c=>c.id);
 const activeUnits=()=>byGroup()?data.groups.concat(data.categories.some(c=>!c.archived&&groupOfCat(c.id)==='__none')?[NO_GROUP]:[]):activeCats();
 const running=()=>data.entries.find(e=>e.end==null);
@@ -1069,8 +1074,14 @@ function legendHTML(ids){
   return `<div class="legend" style="margin-top:10px">${unitOrder().filter(id=>ids.has(id)).map(unitById).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>`;
 }
 function weekStart(ms){const d=new Date(ms);const wd=(d.getDay()+6)%7;return new Date(d.getFullYear(),d.getMonth(),d.getDate()-wd).getTime();}
+const pickUnits=()=>activeUnits().concat(GAPS);
+// Tramos [inicio, fin) de una unidad en un día: sus registros o, para «Huecos», el tiempo sin registrar.
+function unitSpans(ds,id){
+  if(id==='__gaps') return gapsOfDay(ds).map(g=>[g.a,g.b]);
+  return entriesOfDay(ds).filter(e=>U(e.cat)===id).map(e=>[Math.max(e.start,ds),Math.min(endOf(e),dayEnd(ds))]).filter(x=>x[1]>x[0]);
+}
 function statCat(){
-  if(state.statCat&&activeUnits().some(c=>c.id===state.statCat)) return state.statCat;
+  if(state.statCat&&pickUnits().some(c=>c.id===state.statCat)) return state.statCat;
   const m=new Map();
   for(let i=1;i<=90;i++) for(const g of segmentsOfDay(dayStart(dayStart(Date.now())-i*DAY+HOUR*12))) m.set(U(g.e.cat),(m.get(U(g.e.cat))||0)+g.ms);
   const top=[...m.entries()].sort((a,b)=>b[1]-a[1])[0];
@@ -1113,7 +1124,7 @@ function statsResumen(statDays,n){
 /* Día tipo: a qué hora sueles hacer cada cosa. La altura de cada columna es la parte
    de esa hora que llegas a tener registrada; el hueco de arriba es lo no registrado. */
 function statsDiaTipo(statDays){
-  if(state.dayCat&&activeUnits().some(c=>c.id===state.dayCat)) return statsDiaTipoCat(statDays,state.dayCat);
+  if(state.dayCat&&pickUnits().some(c=>c.id===state.dayCat)) return statsDiaTipoCat(statDays,state.dayCat);
   const hours=hourMatrix(statDays), used=new Set();
   for(const h of hours) for(const id of h.m.keys()) used.add(id);
   if(!used.size) return '<p class="empty">Sin registros en este periodo.</p>';
@@ -1132,19 +1143,24 @@ function statsDiaTipo(statDays){
    (si no, una actividad de media hora al día no se vería), y cada columna dice qué parte
    de los días del periodo había algo de ella en esa hora. */
 function statsDiaTipoCat(statDays,id){
-  const c=unitById(id), n=statDays.length, hours=hourMatrix(statDays).map(h=>h.m.get(id)||0);
+  const c=unitById(id), n=statDays.length, hours=new Array(24).fill(0), daysIn=new Array(24).fill(0);
+  let daysWith=0;
+  for(const ds of statDays){
+    const sp=unitSpans(ds,id); if(sp.length) daysWith++;
+    for(let h=0;h<24;h++){ const a=ds+h*HOUR, b=a+HOUR; let hit=false;
+      for(const [x,y] of sp){ const ms=Math.min(y,b)-Math.max(x,a); if(ms>0){ hours[h]+=ms; hit=true; } }
+      if(hit) daysIn[h]++; }
+  }
   const total=hours.reduce((a,b)=>a+b,0);
   const head=`<div class="section-head"><h2>Día tipo, hora a hora</h2>${unitBtn('daycat')}</div>`;
-  if(!total) return `<section class="card">${head}<p class="empty">Sin registros de ${esc(c.name)} en este periodo.</p></section>`;
+  if(!total) return `<section class="card">${head}<p class="empty">${id==='__gaps'?'Sin huecos':'Sin registros de '+esc(c.name)} en este periodo.</p></section>`;
   const max=Math.max(...hours);
-  const daysIn=Array.from({length:24},(_,h)=>statDays.filter(ds=>entriesOfDay(ds).some(e=>U(e.cat)===id&&clipEntry(e,ds+h*HOUR,ds+(h+1)*HOUR))).length);
   const peak=hours.indexOf(max);
   // franja central: las horas más cargadas que suman la mitad del tiempo
   const byLoad=hours.map((ms,h)=>({ms,h})).sort((a,b)=>b.ms-a.ms); let acc=0; const core=[];
   for(const x of byLoad){ if(acc>=total/2) break; core.push(x.h); acc+=x.ms; }
   core.sort((a,b)=>a-b);
   const ranges=[]; for(const h of core){ const r=ranges[ranges.length-1]; if(r&&r[1]===h) r[1]=h+1; else ranges.push([h,h+1]); }
-  const daysWith=statDays.filter(ds=>entriesOfDay(ds).some(e=>U(e.cat)===id)).length;
   return `<section class="card">${head}
     <div class="hourbars">${hours.map((ms,i)=>`<div class="hcol" title="${pad(i)}:00 · ${fmtDur(ms/n)} de media · ${daysIn[i]} de ${n} días"><div class="vbar"><div class="vstack" style="height:${ms/max*100}%"><i style="flex:1 1 0;background:${c.color};opacity:${(.35+.65*daysIn[i]/n).toFixed(2)}"></i></div></div></div>`).join('')}</div>
     <div class="ticks cols"><span style="grid-column:1">0</span><span style="grid-column:4">3</span><span style="grid-column:7">6</span><span style="grid-column:10">9</span><span style="grid-column:13">12</span><span style="grid-column:16">15</span><span style="grid-column:19">18</span><span style="grid-column:22">21</span></div>
@@ -1182,7 +1198,7 @@ function statsProgresion(){
   for(let i=W;i>=1;i--){
     const d=new Date(cw), ws=new Date(d.getFullYear(),d.getMonth(),d.getDate()-7*i).getTime();
     let ms=0;
-    for(let k=0;k<7;k++){ const ds=dayStart(ws+k*DAY+HOUR*12); if(state.dayFilter==='work'&&isRest(ds)) continue; for(const g of segmentsOfDay(ds)) if(U(g.e.cat)===id) ms+=g.ms; }
+    for(let k=0;k<7;k++){ const ds=dayStart(ws+k*DAY+HOUR*12); if(state.dayFilter==='work'&&isRest(ds)) continue; for(const [a,b] of unitSpans(ds,id)) ms+=b-a; }
     weeks.push({ws,ms});
   }
   const avg4=weeks.map((_,i)=>{const a=weeks.slice(Math.max(0,i-3),i+1);return a.reduce((x,w)=>x+w.ms,0)/a.length;});
@@ -1422,8 +1438,8 @@ function viewStats(){
       <div class="atabs" role="tablist">${ANALYSES.map(([k,l])=>`<button data-analysis="${k}" aria-pressed="${a===k}" ${a===k?'id="atab-on"':''}>${l}</button>`).join('')}</div>
       <div class="statrow">
         <label class="periodsel" title="${prog?'La semana en curso no cuenta hasta que termine.':`${fmtDayLong(allDays[n-1])} → ${fmtDayLong(allDays[0])}. Hoy no cuenta hasta que termine.`}"><select id="periodSel" data-period="${prog?'weeks':'range'}" aria-label="Periodo">${opts.map(([k,l,on])=>`<option value="${k}" ${on?'selected':''}>${l}</option>`).join('')}</select></label>
-        <button class="toggle" data-act="toggle-rest" aria-pressed="${state.dayFilter==='all'}" title="${state.dayFilter==='all'?'Se cuentan también los días de descanso':'Solo días laborables'}">🌴 Descanso</button>
-        ${data.groups.length?`<button class="stack" data-level="${byGroup()?'cat':'group'}" aria-label="Ver por ${byGroup()?'supercategorías':'categorías'}; toca para cambiar">${[['cat','Categorías'],['group','Supercategorías']].map(([k,l])=>`<span class="${state.level===k?'on':''}">${l}</span>`).join('')}</button>`:''}
+        <button class="toggle" data-act="toggle-rest" aria-pressed="${state.dayFilter==='all'}" title="${state.dayFilter==='all'?'Se cuentan también los días de descanso':'Solo días laborables'}">Con 🌴</button>
+        ${data.groups.length?`<button class="stack" data-level="${byGroup()?'cat':'group'}" aria-label="Ver por ${byGroup()?'supercategorías':'categorías'}; toca para cambiar">${[['cat','Categorías'],['group','Supercat.']].map(([k,l])=>`<span class="${state.level===k?'on':'off'}" aria-hidden="${state.level!==k}">${l}</span>`).join('')}</button>`:''}
       </div>
 
     </div>
@@ -1683,7 +1699,7 @@ function renderSheet(){
     const attr=state.unitFor, sel=attr==='daycat'?state.dayCat:statCat();
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Elegir">
       <div class="handle"></div><h2>${byGroup()?'Supercategoría':'Categoría'}</h2>
-      <div class="list">${attr==='daycat'?`<button data-${attr}=""><span class="grow" style="font-weight:${sel?600:800}">Todas</span>${sel?'':'✓'}</button>`:''}${activeUnits().map(c=>`<button data-${attr}="${c.id}"><i class="dot" style="background:${c.color}"></i><span class="grow" style="font-weight:${c.id===sel?800:600}">${esc(c.name)}</span>${c.id===sel?'✓':''}</button>`).join('')}</div>
+      <div class="list">${attr==='daycat'?`<button data-${attr}=""><span class="grow" style="font-weight:${sel?600:800}">Todas</span>${sel?'':'✓'}</button>`:''}${pickUnits().map(c=>`<button data-${attr}="${c.id}" ${c.id==='__gaps'?'style="border-top:1px dashed var(--line)"':''}><i class="dot" style="background:${c.color}"></i><span class="grow" style="font-weight:${c.id===sel?800:600}">${esc(c.name)}</span>${c.id===sel?'✓':''}</button>`).join('')}</div>
     </div></div>`;
   } else if(state.sheet==='import'){
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="Restaurar copia">

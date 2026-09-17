@@ -96,15 +96,16 @@ Regla de la inserción: los dos vecinos se ajustan al nuevo registro (se acortan
 
 ## Datos: los cuatro análisis
 
-Arriba de la pantalla se elige el tipo de análisis; la fila de debajo cambia con él (periodo en los tres primeros, categoría y número de semanas en Progresión). Debajo, en una fila: el periodo (desplegable) y dos botones que se encienden y apagan y valen para todos los análisis: «🌴 Con descanso» (apagado, solo días laborables; encendido, también los de descanso, medias incluidas) y «Supercategorías» (solo si hay alguna).
+Arriba de la pantalla se elige el tipo de análisis; la fila de debajo cambia con él (periodo en los tres primeros, categoría y número de semanas en Progresión). Debajo, en una fila: el periodo (desplegable) y dos botones que se encienden y apagan y valen para todos los análisis: «Con 🌴» (apagado, solo días laborables; encendido, también los de descanso, medias incluidas) y «Supercategorías» (solo si hay alguna).
 
 - **Resumen**: totales por categoría con porcentaje, media por día y comparación con el periodo anterior (▲▼), marcas, balanzas, valoraciones y día a día.
 - **Día tipo**: 24 columnas, una por hora. Con «Todas» se apilan las categorías; eligiendo una se ve solo su reparto por horas, escalado a su hora más cargada, con la franja que concentra la mitad de su tiempo. Cada una reparte por categoría el tiempo registrado en esa hora a lo largo del periodo; lo que le falta para llegar arriba es tiempo sin registrar. Enseña la rutina: a qué hora empiezas de verdad, cuándo se rompe la tarde.
-- **Semana**: media de cada día de la semana, apilada por categoría. Sin los días de descanso salvo con «Con descanso» encendido.
+- **Semana**: media de cada día de la semana, apilada por categoría. Sin los días de descanso salvo con «Con 🌴» encendido.
 - **Progresión**: una barra por semana de una categoría (12, 26 o 52 semanas) y la línea de la media de cuatro semanas, más una frase con las últimas cuatro semanas frente a las cuatro anteriores. La semana en curso no aparece hasta que termina.
 
 - **Tipos**: agrupa los días del periodo según **cómo** repartes el tiempo (no cuánto registras) con k-medias, eligiendo entre 2 y 4 grupos por silueta. Cada grupo se describe con sus categorías dominantes, cuántos días tiene y en qué días de la semana cae; debajo, una tira con un cuadro por día y un mapa (PCA a dos componentes) donde los días parecidos caen juntos. Necesita al menos 12 días con dos horas registradas o no se dibuja. El arranque de k-medias lleva semilla fija, así que los mismos datos dan siempre el mismo resultado.
-- **Huecos**: cuánto tiempo queda sin registrar, a qué hora se escapa, detrás de qué actividad y cómo de largos son los huecos. Se cuentan igual que "Sin registrar": solo entre el primer y el último registro del día; los días de descanso solo cuentan con «Con descanso» encendido. En Hoy y en Registros nunca se cuentan.
+- En **Día** y **Progreso**, el selector de la tarjeta incluye también «Huecos»: a qué horas y semana a semana se acumula el tiempo sin registrar.
+- **Huecos**: cuánto tiempo queda sin registrar, a qué hora se escapa, detrás de qué actividad y cómo de largos son los huecos. Se cuentan igual que "Sin registrar": solo entre el primer y el último registro del día; los días de descanso solo cuentan con «Con 🌴» encendido. En Hoy y en Registros nunca se cuentan.
 
 Ninguna vista lleva categorías escritas a mano: todas recorren las que existan en cada momento. Y en Progresión no hay metas, ni rachas, ni colores de aprobado o suspenso: la unidad es la semana justamente para que un día malo no rompa nada.
 
