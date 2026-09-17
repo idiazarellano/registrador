@@ -311,3 +311,9 @@ state.dayFilter='all'; chk('huecos: descanso dentro con Todos', gapsOfDay(y).len
 chk('sin registrar en Registros sigue a cero', unassignedOfDay(y)===0 && unassignedOfDay(y,true)===2*H);
 state.dayFilter='work';
 })();
+;(function(){
+const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
+const y=dayStart(Date.now()-86400000);
+state.level='group'; chk('día a día pinta supercategorías', statsResumen([y],1).includes('background:#2a78d6'));
+state.level='cat';
+})();

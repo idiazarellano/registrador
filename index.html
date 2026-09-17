@@ -709,8 +709,10 @@ function segLabel(s,c){
 function dayBarHTML(ds,opts={}){
   const segs=segmentsOfDay(ds), now=Date.now(), isToday=dayKey(ds)===dayKey(now);
   const nowPct=(now-ds)/(dayEnd(ds)-ds)*100;
+  // opts.unit: en Datos se pinta con el nivel elegido (categoría o supercategoría)
+  const col=e=>opts.unit?unitById(U(e.cat)):catById(e.cat);
   return `<div class="daybar ${opts.small?'small':''}" role="img" aria-label="Línea del día">
-    ${segs.map(s=>`<${opts.static?'span':'button'} class="seg ${s.e.end==null?'run':''}" ${opts.static?'':`data-edit="${s.e.id}"`} style="left:${s.left}%;width:${s.width}%;background:${catById(s.e.cat).color}" title="${esc(catById(s.e.cat).name)} ${fmtTime(Math.max(s.e.start,ds))}–${s.e.end==null?'ahora':fmtTime(Math.min(s.e.end,dayEnd(ds)))}" aria-label="${esc(catById(s.e.cat).name)}">${opts.small?'':segLabel(s,catById(s.e.cat))}</${opts.static?'span':'button'}>`).join('')}
+    ${segs.map(s=>`<${opts.static?'span':'button'} class="seg ${s.e.end==null?'run':''}" ${opts.static?'':`data-edit="${s.e.id}"`} style="left:${s.left}%;width:${s.width}%;background:${col(s.e).color}" title="${esc(col(s.e).name)} ${fmtTime(Math.max(s.e.start,ds))}–${s.e.end==null?'ahora':fmtTime(Math.min(s.e.end,dayEnd(ds)))}" aria-label="${esc(col(s.e).name)}">${opts.small?'':segLabel(s,col(s.e))}</${opts.static?'span':'button'}>`).join('')}
     ${isToday?`<div class="now" style="left:${nowPct}%"></div>`:''}
   </div>${opts.ticks!==false?`<div class="ticks"><span>0</span><span>3</span><span>6</span><span>9</span><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>`:''}`;
 }
@@ -1087,7 +1089,7 @@ function statsResumen(statDays,n){
       <div class="section-head"><h2>Día a día</h2><span class="label">toca para editarlo</span></div>
       <div class="dayrows" style="margin-top:10px">${statDays.slice().reverse().map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
-        return `<button class="dayrow ${isRest(ds)?'rest':''}" data-day="${ds}" data-goto="registros" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
+        return `<button class="dayrow ${isRest(ds)?'rest':''}" data-day="${ds}" data-goto="registros" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true,unit:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
       ${marksLegendHTML(mc)}
     </section>`;
 }
