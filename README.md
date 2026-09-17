@@ -100,7 +100,7 @@ Arriba de la pantalla se elige el tipo de análisis; la fila de debajo cambia co
 
 - **Resumen**: totales por categoría con porcentaje, media por día y comparación con el periodo anterior (▲▼), marcas, balanzas, valoraciones y día a día.
 - **Día tipo**: 24 columnas, una por hora. Con «Todas» se apilan las categorías; eligiendo una se ve solo su reparto por horas, escalado a su hora más cargada, con la franja que concentra la mitad de su tiempo. Cada una reparte por categoría el tiempo registrado en esa hora a lo largo del periodo; lo que le falta para llegar arriba es tiempo sin registrar. Enseña la rutina: a qué hora empiezas de verdad, cuándo se rompe la tarde.
-- **Semana**: media de cada día de la semana, apilada por categoría. Con «Laborables», sin los días de descanso.
+- **Semana**: media de cada día de la semana, apilada por categoría. Sin los días de descanso salvo con «Con descanso» encendido.
 - **Progresión**: una barra por semana de una categoría (12, 26 o 52 semanas) y la línea de la media de cuatro semanas, más una frase con las últimas cuatro semanas frente a las cuatro anteriores. La semana en curso no aparece hasta que termina.
 
 - **Tipos**: agrupa los días del periodo según **cómo** repartes el tiempo (no cuánto registras) con k-medias, eligiendo entre 2 y 4 grupos por silueta. Cada grupo se describe con sus categorías dominantes, cuántos días tiene y en qué días de la semana cae; debajo, una tira con un cuadro por día y un mapa (PCA a dos componentes) donde los días parecidos caen juntos. Necesita al menos 12 días con dos horas registradas o no se dibuja. El arranque de k-medias lleva semilla fija, así que los mismos datos dan siempre el mismo resultado.
