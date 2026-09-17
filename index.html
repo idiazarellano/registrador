@@ -124,6 +124,9 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .weeksvg{width:100%;height:120px;margin-top:12px;color:var(--ink)}
 .statbars{display:flex;flex-direction:column;gap:6px}
 .seg-control.small{flex-wrap:wrap}
+.statfilters{display:flex;gap:6px}
+.statfilters .seg-control{flex:1 1 auto}
+.statfilters .seg-control button{font-size:12px;padding:6px 6px}
 .seg-control.small button{flex:1 1 28%;font-size:12px;padding:7px 2px}
 /* Tipos de día: agrupación y mapa. */
 .kcard{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -183,7 +186,7 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
 .chip{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border-radius:12px;background:var(--surface);text-align:left;border:2px solid transparent;transition:transform .08s}
 .chip:active{transform:scale(.97)}
-.chip{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.chip,.markchip,.balbtn,.ratename{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .chip .dot{width:12px;height:12px}
 .icon{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;font-size:16px;flex:none;line-height:1}
 .icon.big{width:38px;height:38px;font-size:20px;border-radius:11px}
@@ -255,6 +258,9 @@ main{flex:1;padding:14px 16px 18px;display:flex;flex-direction:column;gap:18px}
 .swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
 .swatches button{aspect-ratio:1;border-radius:50%;border:3px solid transparent}
 .swatches button.on{border-color:var(--ink)}
+.swatches label{aspect-ratio:1;border-radius:50%;border:3px dashed var(--line);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;font-size:16px;color:var(--ink-2);cursor:pointer}
+.swatches label.on{border-style:solid;border-color:var(--ink)}
+.swatches label input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
 input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface);font-size:16px}
 /* records */
 .seg-control{display:flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:2px}
@@ -270,6 +276,13 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .dayrow .d{font-size:12px;font-weight:700;color:var(--ink-2);line-height:1.15}
 .dayrow .d small{display:block;font-weight:500;color:var(--ink-3)}
 .dayrow .h{font-size:12px;color:var(--ink-2);text-align:right}
+/* Marcas del día a vista de pájaro: un punto por marca activa, siempre en la misma posición;
+   hueco si ese día no se hizo, así las columnas se leen de arriba abajo como un calendario. */
+.dmarks{display:flex;flex-wrap:wrap;gap:3px;align-content:center}
+.dmarks i{width:9px;height:9px;border-radius:50%;background:var(--mc);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:9px;line-height:1}
+.dmarks i.off{background:transparent;box-shadow:inset 0 0 0 1.5px var(--surface-3)}
+.dmarks.icons i{width:15px;height:15px;font-size:12px;background:transparent}
+.dmarks.icons i.off{opacity:.18;filter:grayscale(1);box-shadow:none}
 .totals{display:flex;flex-direction:column;gap:10px}
 .trow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:baseline}
 .trow .n{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
@@ -329,14 +342,16 @@ const KEY_SNAP='registrador.v1.snap.';  // copias internas diarias: KEY_SNAP+'AA
 const SNAP_DAYS=7;
 const KEY_TRASH='registrador.v1.trash'; // papelera tras 'Borrar todos los registros' (30 días)
 const TRASH_DAYS=30;
-const SCHEMA=4;
+const SCHEMA=5;
 const MIN=60000, HOUR=3600000, DAY=86400000;
-// 4 filas × 8 tonos (rojo→rosa): vivos, oscuros, suaves, neutros/tierra
+// 6 filas × 8 tonos: vivos, oscuros, suaves, neutros/tierra y dos de tonos intermedios (lima, cian, índigo, magenta…)
 const PALETTE=[
   '#e34948','#eb6834','#eda100','#3fa34d','#1baf7a','#2a78d6','#7c3aed','#e87ba4',
   '#9b1c1c','#a34a12','#a87400','#1f6b2e','#0f6e5e','#1c4fa0','#4a3aa7','#b0306e',
   '#f0a3a2','#f6b48f','#f3d17a','#a8d8a0','#8fd8c2','#9ec5f4','#c4b5f7','#f4c2d7',
-  '#374151','#6b7280','#9ca3af','#78350f','#8a5a2b','#b45309','#c9a27e','#a8a29e'];
+  '#374151','#6b7280','#9ca3af','#78350f','#8a5a2b','#b45309','#c9a27e','#a8a29e',
+  '#d9f99d','#84cc16','#65a30d','#06b6d4','#0891b2','#0e7490','#38bdf8','#6366f1',
+  '#4338ca','#a855f7','#c026d3','#db2777','#f43f5e','#881337','#f59e0b','#fde047'];
 const ICON_GROUPS=[
   ['Trabajo','💼 💻 🖥️ ⌨️ 📞 📧 📝 📊 📈 📋 🗂️ 🧾 📎 🖨️ 🏢 🏭 🔧 🛠️ ⚙️ 🧪 🔬 🧑‍🏫 🧑‍💻 🧑‍🔧 👷 🏗️ 📐 🧮 💡 🎯'],
   ['Estudio','📚 📖 ✍️ 🎓 🧠 📓 🗒️ 🔍 🌐 🗣️ 🇬🇧 🎧 🖊️ 📏 🧑‍🎓'],
@@ -374,7 +389,8 @@ function defaultData(){
     balanceLog:[], // una ocasión resuelta: {id,bid,side:'a'|'b',t}
     ratings:[],    // valoraciones del día de 1 a 5: {id,name,icon,color,archived}
     ratingDays:{}, // 'AAAA-MM-DD' -> {id de valoración: 1..5}
-    settings:{backupMode:'auto',theme:'system',granularity:5},
+    groups:[],     // supercategorías: {id,name,icon,color}; cada categoría apunta a una con `group` (o null)
+    settings:{backupMode:'auto',theme:'system',granularity:5,groupsInHoy:true},
     meta:{created:Date.now(),updated:Date.now(),lastBackup:0,lastBackupUpdated:0}};
 }
 function migrate(d){
@@ -390,10 +406,13 @@ function migrate(d){
   d.balanceLog=Array.isArray(d.balanceLog)?d.balanceLog:[];
   d.ratings=Array.isArray(d.ratings)?d.ratings:[];
   d.ratingDays=(d.ratingDays&&typeof d.ratingDays==='object')?d.ratingDays:{};
+  d.groups=Array.isArray(d.groups)?d.groups:[];
+  for(const g of d.groups){ if(g.icon==null) g.icon=''; }
   for(const b of d.balances){ if(b.icon==null) b.icon=''; if(b.archived==null) b.archived=false;
     b.a=Object.assign({label:'A'},b.a||{}); b.b=Object.assign({label:'B'},b.b||{}); }
-  d.settings=Object.assign({backupMode:'auto',theme:'system',granularity:5},d.settings||{});
-  for(const c of d.categories){ if(c.icon==null) c.icon=''; if(c.archived==null) c.archived=false; }
+  d.settings=Object.assign({backupMode:'auto',theme:'system',granularity:5,groupsInHoy:true},d.settings||{});
+  for(const c of d.categories){ if(c.icon==null) c.icon=''; if(c.archived==null) c.archived=false;
+    if(c.group===undefined||(c.group!=null&&!d.groups.some(g=>g.id===c.group))) c.group=null; }
   d.meta=Object.assign({created:Date.now(),updated:0,lastBackup:0,lastBackupUpdated:0},d.meta||{});
   if(d.schema<2){ // v2: autoBackup (sí/no) pasa a backupMode (auto/ask/off)
     if('autoBackup' in d.settings){ d.settings.backupMode=d.settings.autoBackup===false?'off':'auto'; delete d.settings.autoBackup; }
@@ -401,7 +420,8 @@ function migrate(d){
   if(!['auto','ask','off'].includes(d.settings.backupMode)) d.settings.backupMode='auto';
   if(d.schema<3){ d.schema=3; } // v3: marcas (eventos sí/no) y tareas; campos nuevos, nada que convertir
   if(d.schema<4){ d.schema=4; } // v4: balanzas (ocasiones de dos salidas); campos nuevos, nada que convertir
-  // futuras versiones: if(d.schema<5){ ... d.schema=5; }
+  if(d.schema<5){ d.schema=5; } // v5: supercategorías; los registros no cambian, solo categoria.group
+  // futuras versiones: if(d.schema<6){ ... d.schema=6; }
   d.schema=SCHEMA;
   return d;
 }
@@ -464,6 +484,18 @@ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().cat
 /* ============ Modelo ============ */
 const catById=id=>data.categories.find(c=>c.id===id)||{id,name:'(sin categoría)',color:'#9a9a9a',icon:''};
 const activeCats=()=>data.categories.filter(c=>!c.archived);
+/* Supercategorías: agrupan categorías para analizar con menos detalle. Los registros siguen
+   apuntando a su categoría; la supercategoría se deduce en cada cálculo, así cambiar una
+   categoría de grupo rehace todo el histórico sin tocar un solo registro. */
+const NO_GROUP={id:'__none',name:'Sin grupo',color:'#a8a29e',icon:''};
+const groupById=id=>data.groups.find(g=>g.id===id)||NO_GROUP;
+const groupOfCat=catId=>{const c=data.categories.find(x=>x.id===catId);return c&&c.group&&data.groups.some(g=>g.id===c.group)?c.group:'__none';};
+// «Unidad» de análisis en Datos: la categoría o su supercategoría, según el interruptor.
+const byGroup=()=>state.level==='group';
+const U=catId=>byGroup()?groupOfCat(catId):catId;
+const unitById=id=>byGroup()?groupById(id):catById(id);
+const unitOrder=()=>byGroup()?data.groups.map(g=>g.id).concat('__none'):data.categories.map(c=>c.id);
+const activeUnits=()=>byGroup()?data.groups.concat(data.categories.some(c=>!c.archived&&groupOfCat(c.id)==='__none')?[NO_GROUP]:[]):activeCats();
 const running=()=>data.entries.find(e=>e.end==null);
 const endOf=e=>e.end==null?Date.now():e.end;
 function sortEntries(){data.entries.sort((a,b)=>a.start-b.start);}
@@ -634,6 +666,7 @@ function importJSON(text,mode){
     const blog=new Set(data.balanceLog.map(x=>x.id)); for(const x of d.balanceLog) if(!blog.has(x.id)) data.balanceLog.push(x);
     const mks=new Set(data.marks.map(m=>m.id)); for(const m of d.marks) if(!mks.has(m.id)) data.marks.push(m);
     for(const k of Object.keys(d.markDays)) data.markDays[k]=[...new Set([...(data.markDays[k]||[]),...d.markDays[k]])];
+    const gps=new Set(data.groups.map(g=>g.id)); for(const g of d.groups) if(!gps.has(g.id)) data.groups.push(g);
     const rts=new Set(data.ratings.map(r=>r.id)); for(const r of d.ratings) if(!rts.has(r.id)) data.ratings.push(r);
     for(const k of Object.keys(d.ratingDays)) data.ratingDays[k]=Object.assign({},d.ratingDays[k],data.ratingDays[k]||{});
     toast(`${n} registros añadidos`);
@@ -643,7 +676,7 @@ function importJSON(text,mode){
 
 /* ============ Interfaz ============ */
 const RESUME_WINDOW=HOUR; // misma categoría dentro de esta ventana: se ofrece unir
-const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,pendEnd:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[],analysis:'resumen',statCat:null,weeks:26};
+const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,pendEnd:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[],analysis:'resumen',statCat:null,weeks:26,dayCat:null,level:'cat',dayFilter:'work'};
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let toastTimer;
@@ -703,8 +736,8 @@ function toggleRest(ds){const k=dayKey(ds);if(isRest(ds))data.restDays=data.rest
 function restBtn(ds){return `<button class="restbtn ${isRest(ds)?'on':''}" data-rest="${ds}" aria-pressed="${isRest(ds)}" title="Marcar como día de descanso">🌴 Descanso</button>`;}
 /* Huecos entre registros de un día (y, si es hoy y no hay nada en marcha, desde el último hasta ahora).
    En días de descanso no se cuenta. No forma parte del total registrado. */
-function unassignedOfDay(ds){
-  if(isRest(ds)) return 0;
+function unassignedOfDay(ds,withRest){ // withRest: Datos con «Todos»; Hoy y Registros nunca
+  if(isRest(ds)&&!withRest) return 0;
   const de=dayEnd(ds), segs=entriesOfDay(ds).map(e=>[Math.max(e.start,ds),Math.min(endOf(e),de)]).filter(x=>x[1]>x[0]).sort((a,b)=>a[0]-b[0]);
   if(!segs.length) return 0;
   let u=0, cur=segs[0][1];
@@ -735,6 +768,20 @@ function toggleMark(id,ds){
   if(list.includes(id)){const r=list.filter(x=>x!==id); if(r.length) data.markDays[k]=r; else delete data.markDays[k];}
   else data.markDays[k]=list.concat(id);
   save();
+}
+/* Columna de marcas para las filas de días (Registros y Datos). Devuelve el ancho para alinear la escala. */
+function dayMarksCol(){
+  const ms=activeMarks(), per=Math.min(ms.length,4);
+  const icons=ms.length<=4&&ms.every(m=>m.icon);
+  return {ms,icons,w:ms.length?per*(icons?15:9)+(per-1)*3:0};
+}
+function dayMarksHTML(ds,col){
+  if(!col.ms.length) return '';
+  return `<span class="dmarks ${col.icons?'icons':''}" style="width:${col.w}px" aria-label="Marcas: ${esc(col.ms.filter(m=>isMarked(m.id,ds)).map(m=>m.name).join(', ')||'ninguna')}">${col.ms.map(m=>`<i class="${isMarked(m.id,ds)?'':'off'}" style="--mc:${m.color}" title="${esc(m.name)}">${col.icons?m.icon:''}</i>`).join('')}</span>`;
+}
+function dayRowStyle(col){return col.w?`style="grid-template-columns:56px 1fr ${col.w}px 44px"`:'';}
+function marksLegendHTML(col){
+  return col.ms.length?`<div class="legend" style="margin-top:6px">${col.ms.map(m=>`<span><span class="dmarks ${col.icons?'icons':''}"><i style="--mc:${m.color}">${col.icons?m.icon:''}</i></span>${esc(m.name)}</span>`).join('')}</div>`:'';
 }
 function marksRowHTML(ds){
   const ms=activeMarks(); if(!ms.length) return '';
@@ -832,7 +879,7 @@ function ratingsHTML(ds){
 function ratingContrast(id,days,min=2){
   const hi=days.filter(ds=>ratingOf(id,ds)>=4), lo=days.filter(ds=>{const v=ratingOf(id,ds);return v&&v<=2;});
   if(hi.length<min||lo.length<min) return null;
-  const avg=list=>{const m=new Map();for(const ds of list)for(const g of segmentsOfDay(ds))m.set(g.e.cat,(m.get(g.e.cat)||0)+g.ms/list.length);return m;};
+  const avg=list=>{const m=new Map();for(const ds of list)for(const g of segmentsOfDay(ds))m.set(U(g.e.cat),(m.get(U(g.e.cat))||0)+g.ms/list.length);return m;};
   const A=avg(hi), B=avg(lo), ids=new Set([...A.keys(),...B.keys()]);
   const diffs=[...ids].map(c=>({c,d:(A.get(c)||0)-(B.get(c)||0)})).filter(x=>Math.abs(x.d)>=15*MIN).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d)).slice(0,3);
   return {hi:hi.length,lo:lo.length,diffs};
@@ -845,7 +892,7 @@ function statsRatingsHTML(days,prevDays){
     if(!cur) return `<div class="balance"><div class="balhead"><span>${r.icon?r.icon+' ':''}${esc(r.name)}</span><small>sin notas en el periodo</small></div></div>`;
     const dist=[1,2,3,4,5].map(n=>days.filter(ds=>ratingOf(r.id,ds)===n).length);
     const k=ratingContrast(r.id,days);
-    const cx=k?(k.diffs.length?`Días con 4–5 (${k.hi}) frente a días con 1–2 (${k.lo}): ${k.diffs.map(x=>`${esc(catById(x.c).name)} <b class="num">${x.d>0?'+':'−'}${fmtDur(Math.abs(x.d))}</b>`).join(' · ')} de media.`:`Días con 4–5 y con 1–2 reparten el tiempo de forma parecida.`)
+    const cx=k?(k.diffs.length?`Días con 4–5 (${k.hi}) frente a días con 1–2 (${k.lo}): ${k.diffs.map(x=>`${esc(unitById(x.c).name)} <b class="num">${x.d>0?'+':'−'}${fmtDur(Math.abs(x.d))}</b>`).join(' · ')} de media.`:`Días con 4–5 y con 1–2 reparten el tiempo de forma parecida.`)
       :'Con al menos 2 días de 4–5 y 2 de 1–2 se compara en qué se fue el tiempo.';
     return `<div class="balance">
       <div class="balhead"><span>${r.icon?r.icon+' ':''}${esc(r.name)}</span><small><b class="num" style="color:var(--ink);font-size:15px">${cur.m.toFixed(1).replace('.',',')}</b> de media · ${cur.n}/${days.length} días${prev?` · antes ${prev.m.toFixed(1).replace('.',',')}`:''}</small></div>
@@ -923,7 +970,7 @@ function viewHoy(){
     <div>${dayBarHTML(ds)}</div>
     ${nowPanel}
     <div class="section-head"><h2>Categorías</h2><button class="linkbtn" data-act="edit-cats">Editar</button></div>
-    <div class="catgrid">${activeCats().map(c=>`<button class="chip ${r&&r.cat===c.id?'on':''}" data-start="${c.id}">${iconOrDot(c)}<span class="name">${esc(c.name)}</span>${tot.get(c.id)?`<span class="tot num">${fmtDur(tot.get(c.id))}</span>`:''}</button>`).join('')}
+    <div class="catgrid">${activeCats().map(c=>`<button class="chip ${r&&r.cat===c.id?'on':''}" data-start="${c.id}" ${data.settings.groupsInHoy&&groupOfCat(c.id)!=='__none'?`style="box-shadow:inset 4px 0 0 ${groupById(c.group).color}" title="${esc(groupById(c.group).name)}"`:''}>${iconOrDot(c)}<span class="name">${esc(c.name)}</span>${tot.get(c.id)?`<span class="tot num">${fmtDur(tot.get(c.id))}</span>`:''}</button>`).join('')}
       <button class="chip add" data-act="new-cat">+ Categoría</button></div>
     <div class="section-head"><h2>Marcas</h2><button class="linkbtn" data-act="new-mark">+ Marca</button></div>
     ${activeMarks().length?marksRowHTML(ds):'<p class="empty" style="margin:0">Cosas de sí o no: «he leído», «he tomado la pastilla». Sin horas.</p>'}
@@ -942,14 +989,16 @@ function viewRegistros(){
   const stripEnd = sel>today-13*DAY ? today : dayStart(Math.min(today,sel+6*DAY)+HOUR*12);
   const days=[];for(let i=0;i<14;i++){days.push(dayStart(stripEnd-i*DAY+HOUR*12));}
   const shown=new Set();for(const ds of days)for(const g of segmentsOfDay(ds))shown.add(g.e.cat);
+  const mc=dayMarksCol();
   return `<div class="topbar"><h1>Registros</h1>${gearBtn}</div>
     <section class="card">
       <div class="section-head"><h2>Elige un día</h2><span class="label">0 → 24 h</span></div>
       <div class="dayrows" style="margin-top:10px">${days.map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
-        return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''}" data-day="${ds}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span><span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
-      <div class="ticks" style="padding-left:66px;padding-right:62px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+        return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''}" data-day="${ds}" ${dayRowStyle(mc)}><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}<span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
+      <div class="ticks" style="padding-left:66px;padding-right:${mc.w?mc.w+64:62}px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
       <div class="legend" style="margin-top:10px">${data.categories.filter(c=>shown.has(c.id)).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>
+      ${marksLegendHTML(mc)}
     </section>
     <section class="card">
       <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><span class="row" style="gap:8px;align-items:center;justify-content:center;flex:1"><h2 style="font-size:14px;font-weight:800">${fmtDayLong(state.selDay)}</h2>${restBtn(state.selDay)}</span><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
@@ -957,15 +1006,15 @@ function viewRegistros(){
       ${activeMarks().length?`<div class="section-head" style="margin-bottom:8px"><h2>Marcas</h2></div>${marksRowHTML(state.selDay)}`:''}
       ${activeBalances().length?`<div class="section-head" style="margin:12px 0 4px"><h2>Balanzas</h2></div>${balancesHTML(state.selDay)}`:''}
       ${activeRatings().length?`<div class="section-head" style="margin:12px 0 4px"><h2>Valoraciones</h2></div>${ratingsHTML(state.selDay)}`:''}
-      ${entriesListHTML(state.selDay,!isRest(state.selDay))}
-      <div class="row end" style="margin-top:10px"><button class="linkbtn" data-act="manual-day">+ Añadir registro este día</button></div>
-    </section>`;
+    </section>
+    <div class="section-head"><h2>Registros del ${fmtDayLong(state.selDay).toLowerCase()}</h2><button class="linkbtn" data-act="manual-day">+ Añadir a mano</button></div>
+    ${entriesListHTML(state.selDay,!isRest(state.selDay))}`;
 }
 
 /* Estadísticas: solo días completos (hoy va a medias y falsearía medias y comparaciones). */
 function periodTotals(list){
   const m=new Map(); let s=0;
-  for(const ds of list) for(const g of segmentsOfDay(ds)){ m.set(g.e.cat,(m.get(g.e.cat)||0)+g.ms); s+=g.ms; }
+  for(const ds of list) for(const g of segmentsOfDay(ds)){ m.set(U(g.e.cat),(m.get(U(g.e.cat))||0)+g.ms); s+=g.ms; }
   return {m,s};
 }
 function deltaHTML(now,before){
@@ -982,46 +1031,47 @@ function hourMatrix(days){
   for(const ds of days) for(const e of entriesOfDay(ds)) for(let h=0;h<24;h++){
     const a=ds+h*HOUR, c=clipEntry(e,a,a+HOUR); if(!c) continue;
     const cell=hours[h], ms=c[1]-c[0];
-    cell.m.set(e.cat,(cell.m.get(e.cat)||0)+ms); cell.t+=ms;
+    const u=U(e.cat); cell.m.set(u,(cell.m.get(u)||0)+ms); cell.t+=ms;
   }
   return hours;
 }
 /* Barra vertical apilada: se ordenan las categorías como en Ajustes para que el
    apilado sea estable de una columna a otra. */
 function stackHTML(map,full,height){
-  const order=data.categories.map(c=>c.id).filter(id=>map.has(id));
+  const order=unitOrder().filter(id=>map.has(id));
   return `<div class="vbar"><div class="vstack" style="height:${Math.min(100,height*100)}%">${
-    order.map(id=>`<i style="flex:${map.get(id)} 1 0;background:${catById(id).color}"></i>`).join('')}</div></div>`;
+    order.map(id=>`<i style="flex:${map.get(id)} 1 0;background:${unitById(id).color}"></i>`).join('')}</div></div>`;
 }
 function legendHTML(ids){
-  return `<div class="legend" style="margin-top:10px">${data.categories.filter(c=>ids.has(c.id)).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>`;
+  return `<div class="legend" style="margin-top:10px">${unitOrder().filter(id=>ids.has(id)).map(unitById).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>`;
 }
 function weekStart(ms){const d=new Date(ms);const wd=(d.getDay()+6)%7;return new Date(d.getFullYear(),d.getMonth(),d.getDate()-wd).getTime();}
 function statCat(){
-  if(state.statCat&&data.categories.some(c=>c.id===state.statCat)) return state.statCat;
+  if(state.statCat&&activeUnits().some(c=>c.id===state.statCat)) return state.statCat;
   const m=new Map();
-  for(let i=1;i<=90;i++) for(const g of segmentsOfDay(dayStart(dayStart(Date.now())-i*DAY+HOUR*12))) m.set(g.e.cat,(m.get(g.e.cat)||0)+g.ms);
+  for(let i=1;i<=90;i++) for(const g of segmentsOfDay(dayStart(dayStart(Date.now())-i*DAY+HOUR*12))) m.set(U(g.e.cat),(m.get(U(g.e.cat))||0)+g.ms);
   const top=[...m.entries()].sort((a,b)=>b[1]-a[1])[0];
-  return top?top[0]:(activeCats()[0]||{}).id;
+  return top?top[0]:(activeUnits()[0]||{}).id;
 }
 
 function statsResumen(statDays,n){
   const prevDays=[]; for(let i=n+1;i<=2*n;i++) prevDays.push(dayStart(dayStart(Date.now())-i*DAY+HOUR*12));
+  filterDays(prevDays);
   const cur=periodTotals(statDays), prev=periodTotals(prevDays);
-  const rows=[...cur.m.entries()].map(([id,ms])=>({c:catById(id),ms,prev:prev.m.get(id)||0})).sort((a,b)=>b.ms-a.ms);
+  const rows=[...cur.m.entries()].map(([id,ms])=>({c:unitById(id),ms,prev:prev.m.get(id)||0})).sort((a,b)=>b.ms-a.ms);
   const max=rows.length?rows[0].ms:1;
-  const workDays=statDays.filter(ds=>!isRest(ds)&&segmentsOfDay(ds).length);
+  const workDays=statDays.filter(ds=>segmentsOfDay(ds).length);
   const restCount=statDays.filter(isRest).length;
-  let workSum=0;for(const ds of workDays)for(const g of segmentsOfDay(ds))workSum+=g.ms;
-  const perCat=(id,list)=>{let w=0;for(const ds of list)for(const g of segmentsOfDay(ds))if(g.e.cat===id)w+=g.ms;return w;};
+  const mc=dayMarksCol();
+  const perCat=(id,list)=>{let w=0;for(const ds of list)for(const g of segmentsOfDay(ds))if(U(g.e.cat)===id)w+=g.ms;return w;};
   return `<section class="card">
       <div class="section-head"><h2>Por categoría</h2><span class="sub num" style="font-size:12px;color:var(--ink-2)">${fmtDur(cur.s)} en total</span></div>
       <div class="totals" style="margin-top:12px">${rows.length?rows.map(r=>`<div class="trow">
         <span class="n"><i class="dot" style="background:${r.c.color}"></i>${esc(r.c.name)}</span>
         <span class="v num">${fmtDur(r.ms)} · ${Math.round(r.ms/cur.s*100)} %</span>
         <span class="bar"><i style="width:${r.ms/max*100}%;background:${r.c.color}"></i></span>
-        <span class="sub num">${workDays.length&&perCat(r.c.id,workDays)?`media ${fmtDur(perCat(r.c.id,workDays)/workDays.length)} por día`:'solo en días de descanso'}${prev.s?' · ':''}${prev.s?deltaHTML(r.ms,r.prev):''}</span></div>`).join('')+unassignedRowHTML(statDays.reduce((a,ds)=>a+unassignedOfDay(ds),0),cur.s):'<p class="empty">Sin registros en este periodo.</p>'}
-      ${restCount?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:12px">🌴 ${restCount} ${restCount===1?'día de descanso':'días de descanso'}, con ${fmtDur(cur.s-workSum)} registradas. Las medias se calculan sobre los ${workDays.length} días restantes con registros.</p>`:''}
+        <span class="sub num">${workDays.length&&perCat(r.c.id,workDays)?`media ${fmtDur(perCat(r.c.id,workDays)/workDays.length)} por día`:''}${prev.s?' · ':''}${prev.s?deltaHTML(r.ms,r.prev):''}</span></div>`).join('')+unassignedRowHTML(statDays.reduce((a,ds)=>a+unassignedOfDay(ds,state.dayFilter==='all'),0),cur.s):'<p class="empty">Sin registros en este periodo.</p>'}
+      ${restCount?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:12px">🌴 Incluye ${restCount} ${restCount===1?'día de descanso':'días de descanso'}. Las medias se calculan sobre los ${workDays.length} días con registros.</p>`:''}
       ${prev.s?`<p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:8px">▲▼ comparado con los ${n} días anteriores (${fmtDur(prev.s)} en total).</p>`:''}</div>
     </section>
     ${statsMarksHTML(statDays)}
@@ -1031,18 +1081,20 @@ function statsResumen(statDays,n){
       <div class="section-head"><h2>Día a día</h2><span class="label">toca para editarlo</span></div>
       <div class="dayrows" style="margin-top:10px">${statDays.slice().reverse().map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
-        return `<button class="dayrow ${isRest(ds)?'rest':''}" data-day="${ds}" data-goto="registros"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span><span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
+        return `<button class="dayrow ${isRest(ds)?'rest':''}" data-day="${ds}" data-goto="registros" ${dayRowStyle(mc)}><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}<span class="h num">${t?fmtHours(t):'—'}</span></button>`;}).join('')}</div>
+      ${marksLegendHTML(mc)}
     </section>`;
 }
 
 /* Día tipo: a qué hora sueles hacer cada cosa. La altura de cada columna es la parte
    de esa hora que llegas a tener registrada; el hueco de arriba es lo no registrado. */
 function statsDiaTipo(statDays){
+  if(state.dayCat&&activeUnits().some(c=>c.id===state.dayCat)) return statsDiaTipoCat(statDays,state.dayCat);
   const hours=hourMatrix(statDays), used=new Set();
   for(const h of hours) for(const id of h.m.keys()) used.add(id);
   if(!used.size) return '<p class="empty">Sin registros en este periodo.</p>';
   const n=statDays.length;
-  const top=hours.map(h=>{const e=[...h.m.entries()].sort((a,b)=>b[1]-a[1])[0];return e?catById(e[0]).name:null;});
+  const top=hours.map(h=>{const e=[...h.m.entries()].sort((a,b)=>b[1]-a[1])[0];return e?unitById(e[0]).name:null;});
   return `<section class="card">
     <div class="section-head"><h2>Día tipo</h2><span class="label">${n} días</span></div>
     <div class="hourbars">${hours.map((h,i)=>`<div class="hcol" title="${pad(i)}:00 · ${top[i]?esc(top[i]):'sin registrar'}">${stackHTML(h.m,1,h.t/(n*HOUR))}</div>`).join('')}</div>
@@ -1052,13 +1104,37 @@ function statsDiaTipo(statDays){
   </section>`;
 }
 
+/* Día tipo de una sola categoría: a qué horas cae. La escala va al máximo de esa categoría
+   (si no, una actividad de media hora al día no se vería), y cada columna dice qué parte
+   de los días del periodo había algo de ella en esa hora. */
+function statsDiaTipoCat(statDays,id){
+  const c=unitById(id), n=statDays.length, hours=hourMatrix(statDays).map(h=>h.m.get(id)||0);
+  const total=hours.reduce((a,b)=>a+b,0);
+  const head=`<div class="section-head"><h2>${c.icon?c.icon+' ':''}${esc(c.name)}, hora a hora</h2><span class="label">${n} días</span></div>`;
+  if(!total) return `<section class="card">${head}<p class="empty">Sin registros de ${esc(c.name)} en este periodo.</p></section>`;
+  const max=Math.max(...hours);
+  const daysIn=Array.from({length:24},(_,h)=>statDays.filter(ds=>entriesOfDay(ds).some(e=>U(e.cat)===id&&clipEntry(e,ds+h*HOUR,ds+(h+1)*HOUR))).length);
+  const peak=hours.indexOf(max);
+  // franja central: las horas más cargadas que suman la mitad del tiempo
+  const byLoad=hours.map((ms,h)=>({ms,h})).sort((a,b)=>b.ms-a.ms); let acc=0; const core=[];
+  for(const x of byLoad){ if(acc>=total/2) break; core.push(x.h); acc+=x.ms; }
+  core.sort((a,b)=>a-b);
+  const ranges=[]; for(const h of core){ const r=ranges[ranges.length-1]; if(r&&r[1]===h) r[1]=h+1; else ranges.push([h,h+1]); }
+  const daysWith=statDays.filter(ds=>entriesOfDay(ds).some(e=>U(e.cat)===id)).length;
+  return `<section class="card">${head}
+    <div class="hourbars">${hours.map((ms,i)=>`<div class="hcol" title="${pad(i)}:00 · ${fmtDur(ms/n)} de media · ${daysIn[i]} de ${n} días"><div class="vbar"><div class="vstack" style="height:${ms/max*100}%"><i style="flex:1 1 0;background:${c.color};opacity:${(.35+.65*daysIn[i]/n).toFixed(2)}"></i></div></div></div>`).join('')}</div>
+    <div class="ticks cols"><span style="grid-column:1">0</span><span style="grid-column:4">3</span><span style="grid-column:7">6</span><span style="grid-column:10">9</span><span style="grid-column:13">12</span><span style="grid-column:16">15</span><span style="grid-column:19">18</span><span style="grid-column:22">21</span></div>
+    <p style="margin:12px 0 0;font-size:14px;color:var(--ink-2)">La mitad del tiempo cae en ${ranges.map(r=>`<strong class="num">${pad(r[0])}–${pad(r[1])} h</strong>`).join(', ')}. La hora más habitual es de <strong class="num">${pad(peak)}:00</strong>, con <strong class="num">${fmtDur(max/n)}</strong> de media.</p>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:8px">${fmtDur(total/n)} al día de media, presente en ${daysWith} de ${n} días. La columna más alta es la hora más cargada; cuanto más intenso el color, más días hubo algo a esa hora.</p>
+  </section>`;
+}
+
 /* Semana: media de cada día de la semana. Los días de descanso no cuentan. */
 function statsSemana(statDays){
   const dows=Array.from({length:7},()=>({m:new Map(),t:0,n:0}));
   for(const ds of statDays){
-    if(isRest(ds)) continue;
     const i=(new Date(ds).getDay()+6)%7, cell=dows[i]; cell.n++;
-    for(const g of segmentsOfDay(ds)){ cell.m.set(g.e.cat,(cell.m.get(g.e.cat)||0)+g.ms); cell.t+=g.ms; }
+    for(const g of segmentsOfDay(ds)){ cell.m.set(U(g.e.cat),(cell.m.get(U(g.e.cat))||0)+g.ms); cell.t+=g.ms; }
   }
   const used=new Set(); for(const c of dows) for(const id of c.m.keys()) used.add(id);
   if(!used.size) return '<p class="empty">Sin registros en este periodo.</p>';
@@ -1070,19 +1146,19 @@ function statsSemana(statDays){
       ${stackHTML(c.m,1,avg[i]/max)}
       <span class="dlab">${names[i]}</span><span class="dval num">${c.n?fmtHours(avg[i]):'—'}</span></div>`).join('')}</div>
     ${legendHTML(used)}
-    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:10px">Media de los ${dows.reduce((a,c)=>a+c.n,0)} días del periodo que no son de descanso.</p>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:10px">Media de los ${dows.reduce((a,c)=>a+c.n,0)} días del periodo${state.dayFilter==='work'?' que no son de descanso':', descanso incluido'}.</p>
   </section>`;
 }
 
 /* Progresión: una barra por semana, la unidad que perdona los días malos.
    Sin metas, sin rachas y sin colores de aprobado o suspenso: solo la forma del último medio año. */
 function statsProgresion(){
-  const id=statCat(), c=catById(id), W=state.weeks, cw=weekStart(Date.now());
+  const id=statCat(), c=unitById(id), W=state.weeks, cw=weekStart(Date.now());
   const weeks=[];
   for(let i=W;i>=1;i--){
     const d=new Date(cw), ws=new Date(d.getFullYear(),d.getMonth(),d.getDate()-7*i).getTime();
     let ms=0;
-    for(let k=0;k<7;k++){ const ds=dayStart(ws+k*DAY+HOUR*12); for(const g of segmentsOfDay(ds)) if(g.e.cat===id) ms+=g.ms; }
+    for(let k=0;k<7;k++){ const ds=dayStart(ws+k*DAY+HOUR*12); if(state.dayFilter==='work'&&isRest(ds)) continue; for(const g of segmentsOfDay(ds)) if(U(g.e.cat)===id) ms+=g.ms; }
     weeks.push({ws,ms});
   }
   const avg4=weeks.map((_,i)=>{const a=weeks.slice(Math.max(0,i-3),i+1);return a.reduce((x,w)=>x+w.ms,0)/a.length;});
@@ -1117,13 +1193,12 @@ const KMIN=12;
 function dayVectors(days){
   const rows=[];
   for(const ds of days){
-    if(isRest(ds)) continue;
     const m=new Map(); let t=0;
-    for(const g of segmentsOfDay(ds)){ m.set(g.e.cat,(m.get(g.e.cat)||0)+g.ms); t+=g.ms; }
+    for(const g of segmentsOfDay(ds)){ m.set(U(g.e.cat),(m.get(U(g.e.cat))||0)+g.ms); t+=g.ms; }
     if(t<2*HOUR) continue; // un día casi vacío no describe nada
     rows.push({ds,t,m});
   }
-  const cats=data.categories.map(c=>c.id).filter(id=>rows.some(r=>(r.m.get(id)||0)>0));
+  const cats=unitOrder().filter(id=>rows.some(r=>(r.m.get(id)||0)>0));
   for(const r of rows) r.v=cats.map(id=>(r.m.get(id)||0)/r.t);
   return {cats,rows};
 }
@@ -1198,10 +1273,10 @@ function pca2(V){
 function axisLabel(load,cats){
   const idx=load.map((w,i)=>[w,i]).sort((a,b)=>a[0]-b[0]);
   const lo=idx[0], hi=idx[idx.length-1];
-  return `${esc(catById(cats[lo[1]]).name)} ← → ${esc(catById(cats[hi[1]]).name)}`;
+  return `${esc(unitById(cats[lo[1]]).name)} ← → ${esc(unitById(cats[hi[1]]).name)}`;
 }
 function clusterName(cent,cats){
-  const top=cent.map((w,i)=>({w,c:catById(cats[i])})).sort((a,b)=>b.w-a.w).filter(x=>x.w>=0.12).slice(0,3);
+  const top=cent.map((w,i)=>({w,c:unitById(cats[i])})).sort((a,b)=>b.w-a.w).filter(x=>x.w>=0.12).slice(0,3);
   return top.length?top.map(x=>`${esc(x.c.name)} ${Math.round(x.w*100)} %`).join(' · '):'repartido';
 }
 function statsTipos(days){
@@ -1248,9 +1323,9 @@ function statsTipos(days){
 /* ============ Huecos ============
    Los huecos entre registros no son solo ruido: dicen a qué hora se te escapa el
    registro y detrás de qué actividad. Se cuentan igual que en "Sin registrar":
-   solo entre el primer y el último registro del día, y nunca en días de descanso. */
+   solo entre el primer y el último registro del día; los días de descanso, solo con el filtro «Todos». */
 function gapsOfDay(ds){
-  if(isRest(ds)) return [];
+  if(isRest(ds)&&state.dayFilter!=='all') return []; // en Datos, con «Todos», también cuentan los de descanso
   const de=dayEnd(ds);
   const segs=entriesOfDay(ds).map(e=>({a:Math.max(e.start,ds),b:Math.min(endOf(e),de),cat:e.cat})).filter(x=>x.b>x.a).sort((p,q)=>p.a-q.a);
   if(!segs.length) return [];
@@ -1280,8 +1355,8 @@ function statsHuecos(days){
   const maxH=Math.max(...byHour,1);
   // detrás de qué categoría
   const after=new Map();
-  for(const g of gaps){ const k=g.after; const v=after.get(k)||{n:0,ms:0}; v.n++; v.ms+=g.b-g.a; after.set(k,v); }
-  const afterRows=[...after.entries()].map(([id,v])=>({c:catById(id),...v})).sort((a,b)=>b.ms-a.ms).slice(0,4);
+  for(const g of gaps){ const k=U(g.after); const v=after.get(k)||{n:0,ms:0}; v.n++; v.ms+=g.b-g.a; after.set(k,v); }
+  const afterRows=[...after.entries()].map(([id,v])=>({c:unitById(id),...v})).sort((a,b)=>b.ms-a.ms).slice(0,4);
   const bands=GAP_BANDS.map(([lo,hi,name])=>{const l=gaps.filter(g=>{const d=g.b-g.a;return d>=lo&&d<hi;});return {name,n:l.length,ms:l.reduce((a,g)=>a+(g.b-g.a),0)};}).filter(b=>b.n);
   const maxB=Math.max(...bands.map(b=>b.ms),1);
   return `<section class="card">${head}
@@ -1299,27 +1374,61 @@ function statsHuecos(days){
     <div class="totals" style="margin-top:10px">${bands.map(b=>`<div class="trow">
       <span class="n">${b.name}</span><span class="v num">${b.n} · ${fmtDur(b.ms)}</span>
       <span class="bar"><i style="width:${b.ms/maxB*100}%;background:var(--ink-3)"></i></span></div>`).join('')}</div>
-    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:14px">Un hueco corto suele ser un cambio que se apuntó tarde; uno largo, un rato que no llegaste a registrar. Solo se cuentan los huecos entre el primer y el último registro del día, y nunca en días de descanso.</p>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:14px">Un hueco corto suele ser un cambio que se apuntó tarde; uno largo, un rato que no llegaste a registrar. Solo se cuentan los huecos entre el primer y el último registro del día${state.dayFilter==='all'?', también en días de descanso':''}.</p>
   </section>`;
 }
 
 const ANALYSES=[['resumen','Resumen'],['diatipo','Día'],['semana','Semana'],['progresion','Progreso'],['tipos','Tipos'],['huecos','Huecos']];
+/* «Laborables» deja fuera los días de descanso en todos los análisis; «Todos» los incluye. */
+function filterDays(list){ if(state.dayFilter==='work'){ const k=list.filter(ds=>!isRest(ds)); list.length=0; list.push(...k); } return list; }
+function unitPick(attr,sel,withAll){
+  return `<div class="catpick">${withAll?`<button data-${attr}="" class="${sel?'':'on'}">Todas</button>`:''}${activeUnits().map(c=>`<button data-${attr}="${c.id}" class="${c.id===sel?'on':''}"><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</button>`).join('')}</div>`;
+}
 function viewStats(){
+  if(!data.groups.length) state.level='cat';
   const today=dayStart(Date.now()), n=state.range, a=state.analysis;
-  const statDays=[]; for(let i=1;i<=n;i++) statDays.push(dayStart(today-i*DAY+HOUR*12));
-  const second = a==='progresion'
-    ? `<div class="catpick">${activeCats().map(c=>`<button data-statcat="${c.id}" class="${c.id===statCat()?'on':''}"><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</button>`).join('')}</div>
+  const allDays=[]; for(let i=1;i<=n;i++) allDays.push(dayStart(today-i*DAY+HOUR*12));
+  const statDays=filterDays(allDays.slice());
+  const second = a==='diatipo'
+    ? `${unitPick('daycat',state.dayCat,true)}
+       <div class="seg-control">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${state.range===k}">${k} días</button>`).join('')}</div>
+       <p class="sub" style="font-size:12px;color:var(--ink-3);margin:2px 2px 0">${fmtDayLong(allDays[n-1])} → ${fmtDayLong(allDays[0])}. Hoy no cuenta hasta que termine.</p>`
+    : a==='progresion'
+    ? `${unitPick('statcat',statCat(),false)}
        <div class="seg-control">${[12,26,52].map(k=>`<button data-weeks="${k}" aria-pressed="${state.weeks===k}">${k} semanas</button>`).join('')}</div>`
     : `<div class="seg-control">${[7,14,30,90].map(k=>`<button data-range="${k}" aria-pressed="${state.range===k}">${k} días</button>`).join('')}</div>
-       <p class="sub" style="font-size:12px;color:var(--ink-3);margin:2px 2px 0">${fmtDayLong(statDays[n-1])} → ${fmtDayLong(statDays[0])}. Hoy no cuenta hasta que termine.</p>`;
+       <p class="sub" style="font-size:12px;color:var(--ink-3);margin:2px 2px 0">${fmtDayLong(allDays[n-1])} → ${fmtDayLong(allDays[0])}. Hoy no cuenta hasta que termine.</p>`;
   return `<div class="topbar"><h1>Datos</h1>${gearBtn}</div>
     <div class="statbars">
       <div class="seg-control small">${ANALYSES.map(([k,l])=>`<button data-analysis="${k}" aria-pressed="${a===k}">${l}</button>`).join('')}</div>
+      <div class="statfilters">${data.groups.length?`<div class="seg-control">${[['cat','Categorías'],['group','Supercategorías']].map(([k,l])=>`<button data-level="${k}" aria-pressed="${state.level===k}">${l}</button>`).join('')}</div>`:''}<div class="seg-control">${[['work','Laborables'],['all','Todos']].map(([k,l])=>`<button data-dayfilter="${k}" aria-pressed="${state.dayFilter===k}">${l}</button>`).join('')}</div></div>
       ${second}
     </div>
     ${a==='resumen'?statsResumen(statDays,n):a==='diatipo'?statsDiaTipo(statDays):a==='semana'?statsSemana(statDays):a==='tipos'?statsTipos(statDays):a==='huecos'?statsHuecos(statDays):statsProgresion()}`;
 }
 
+/* Marcas, balanzas y valoraciones se editan igual que las categorías: tocar para editar,
+   ▲▼ para ordenar (el orden es el de Hoy y Registros) y archivar sin perder lo apuntado. */
+const KIND_LIST={mark:'marks',balance:'balances',rating:'ratings',group:'groups'};
+const KIND_ACT={mark:'new-mark',balance:'new-balance',rating:'new-rating',group:'new-group'};
+function kindListHTML(kind,title,desc,addLabel){
+  const all=data[KIND_LIST[kind]], act=all.filter(x=>!x.archived), arch=all.filter(x=>x.archived);
+  const row=(x,extra)=>`<div class="catrow"><button data-kedit="${x.id}" data-kind="${kind}" class="grow" ${x.archived?'style="opacity:.7"':''}>${iconOrDot(x)}<span class="grow">${esc(x.name)}${kind==='balance'?`<br><span class="desc">${esc(x.a.label)} · ${esc(x.b.label)}</span>`:kind==='group'?`<br><span class="desc">${esc(data.categories.filter(c=>c.group===x.id).map(c=>c.name).join(' · ')||'sin categorías')}</span>`:''}</span></button>${extra}</div>`;
+  return `<section class="card" id="aj-${kind}"><div class="label" style="margin-bottom:6px">${title}</div>
+      <p class="desc" style="margin:0 0 6px;font-size:12px;color:var(--ink-3)">${desc}</p>
+      <div class="list">${act.map((x,i)=>row(x,`<button class="mv" data-move="${x.id}" data-kind="${kind}" data-dir="-1" aria-label="Subir" ${i===0?'disabled':''}>▲</button><button class="mv" data-move="${x.id}" data-kind="${kind}" data-dir="1" aria-label="Bajar" ${i===act.length-1?'disabled':''}>▼</button>`)).join('')}
+      <button data-act="${KIND_ACT[kind]}"><span class="dot" style="border:2px dashed var(--line)"></span><span class="grow" style="color:var(--accent);font-weight:700">${addLabel}</span></button></div>
+      ${arch.length?`<div class="label" style="margin:14px 0 6px">Archivadas</div><div class="list">${arch.map(x=>row(x,`<button class="linkbtn" data-unarchive="${x.id}" data-kind="${kind}">Restaurar</button>`)).join('')}</div>`:''}</section>`;
+}
+function kindById(kind,id){return kind==='group'?groupById(id):kind==='mark'?markById(id):kind==='balance'?balById(id):kind==='rating'?ratingById(id):catById(id);}
+function openKindEdit(kind,id){
+  const o=kindById(kind,id);
+  state.catEdit={kind,id:o.id,name:o.name,color:o.color,icon:o.icon||''};
+  if(kind==='balance'){state.catEdit.a=o.a.label;state.catEdit.b=o.b.label;}
+  if(kind==='group') state.catEdit.cats=data.categories.filter(c=>c.group===o.id).map(c=>c.id);
+  if(!kind) state.catEdit.group=o.group||null;
+  state.sheet='cat'; renderSheet();
+}
 function viewAjustes(){
   const s=data.settings;
   return `<div class="topbar"><button class="iconbtn" data-view="${state.prevView}" aria-label="Volver">‹</button><h1>Ajustes</h1></div>
@@ -1327,18 +1436,11 @@ function viewAjustes(){
       <div class="list">${activeCats().map((c,i,arr)=>`<div class="catrow"><button data-cat="${c.id}" class="grow">${iconOrDot(c)}<span class="grow">${esc(c.name)}</span></button><button class="mv" data-move="${c.id}" data-dir="-1" aria-label="Subir" ${i===0?'disabled':''}>▲</button><button class="mv" data-move="${c.id}" data-dir="1" aria-label="Bajar" ${i===arr.length-1?'disabled':''}>▼</button></div>`).join('')}
       <button data-act="new-cat"><span class="dot" style="border:2px dashed var(--line)"></span><span class="grow" style="color:var(--accent);font-weight:700">Nueva categoría</span></button></div>
       ${data.categories.some(c=>c.archived)?`<div class="label" style="margin:14px 0 6px">Archivadas</div><div class="list">${data.categories.filter(c=>c.archived).map(c=>`<div class="catrow"><button data-cat="${c.id}" class="grow" style="opacity:.7">${iconOrDot(c)}<span class="grow">${esc(c.name)}</span></button><button class="linkbtn" data-unarchive="${c.id}">Restaurar</button></div>`).join('')}</div>`:''}</section>
-    <section class="card"><div class="label" style="margin-bottom:6px">Marcas</div>
-      <p class="desc" style="margin:0 0 6px;font-size:12px;color:var(--ink-3)">Eventos de sí o no, uno por día. Aparecen en Hoy debajo de las categorías.</p>
-      <div class="list">${data.marks.map(m=>`<div class="catrow"><button data-markedit="${m.id}" class="grow">${m.icon?`<span class="icon" style="background:${m.color}">${m.icon}</span>`:`<span class="dot" style="background:${m.color}"></span>`}<span class="grow">${esc(m.name)}</span></button></div>`).join('')}
-      <button data-act="new-mark"><span class="dot" style="border:2px dashed var(--line)"></span><span class="grow" style="color:var(--accent);font-weight:700">Nueva marca</span></button></div></section>
-    <section class="card"><div class="label" style="margin-bottom:6px">Balanzas</div>
-      <p class="desc" style="margin:0 0 6px;font-size:12px;color:var(--ink-3)">Ocasiones con dos salidas excluyentes, contadas tantas veces como pasen. Aparecen en Hoy debajo de las marcas.</p>
-      <div class="list">${data.balances.map(b=>`<div class="catrow"><button data-baledit="${b.id}" class="grow">${b.icon?`<span class="icon" style="background:${b.color}">${b.icon}</span>`:`<span class="dot" style="background:${b.color}"></span>`}<span class="grow">${esc(b.name)}<br><span class="desc">${esc(b.a.label)} · ${esc(b.b.label)}</span></span></button></div>`).join('')}
-      <button data-act="new-balance"><span class="dot" style="border:2px dashed var(--line)"></span><span class="grow" style="color:var(--accent);font-weight:700">Nueva balanza</span></button></div></section>
-    <section class="card"><div class="label" style="margin-bottom:6px">Valoraciones</div>
-      <p class="desc" style="margin:0 0 6px;font-size:12px;color:var(--ink-3)">Una nota del 1 al 5 por día. Aparecen en Hoy debajo de las balanzas.</p>
-      <div class="list">${data.ratings.map(r=>`<div class="catrow"><button data-rateedit="${r.id}" class="grow">${r.icon?`<span class="icon" style="background:${r.color}">${r.icon}</span>`:`<span class="dot" style="background:${r.color}"></span>`}<span class="grow">${esc(r.name)}</span></button></div>`).join('')}
-      <button data-act="new-rating"><span class="dot" style="border:2px dashed var(--line)"></span><span class="grow" style="color:var(--accent);font-weight:700">Nueva valoración</span></button></div></section>
+    ${kindListHTML('group','Supercategorías','Agrupan categorías para analizar con menos detalle («Trabajo», «Familia»). Los registros no cambian: en Datos se elige ver por categoría o por supercategoría.','Nueva supercategoría')}
+    ${data.groups.length?`<section class="card"><div class="list"><button data-act="groups-hoy"><span class="grow">Mostrar en Hoy<br><span class="desc">Una rayita del color de la supercategoría en el borde de cada categoría.</span></span><span class="restbtn ${data.settings.groupsInHoy?'on':''}">${data.settings.groupsInHoy?'Sí':'No'}</span></button></div></section>`:''}
+    ${kindListHTML('mark','Marcas','Eventos de sí o no, uno por día. Aparecen en Hoy debajo de las categorías.','Nueva marca')}
+    ${kindListHTML('balance','Balanzas','Ocasiones con dos salidas excluyentes, contadas tantas veces como pasen. Aparecen en Hoy debajo de las marcas.','Nueva balanza')}
+    ${kindListHTML('rating','Valoraciones','Una nota del 1 al 5 por día. Aparecen en Hoy debajo de las balanzas.','Nueva valoración')}
     <section class="card"><div class="label" style="margin-bottom:6px">Copia de seguridad</div>
       <div class="label" style="margin-bottom:6px;color:var(--ink-3)">Copia diaria</div>
       <div class="seg-control">${[['auto','Automática'],['ask','Avisar'],['off','No']].map(([k,l])=>`<button data-bmode="${k}" aria-pressed="${s.backupMode===k}">${l}</button>`).join('')}</div>
@@ -1367,6 +1469,9 @@ function viewAjustes(){
 
 function render(){
   applyTheme();
+  // Si la app sigue abierta al pasar la medianoche, Registros salta al día nuevo.
+  const today=dayStart(Date.now());
+  if(state.today!==today){ if(state.today!=null) state.selDay=today; state.today=today; }
   const v=$('#view');
   v.innerHTML={hoy:viewHoy,tareas:viewTareas,registros:viewRegistros,stats:viewStats,ajustes:viewAjustes}[state.view]();
   renderTabs(); renderSheet();
@@ -1483,21 +1588,25 @@ function renderSheet(){
         <span class="row"><button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm primary" data-act="edit-save" ${dur<MIN?'disabled style="opacity:.5"':''}>Guardar</button></span>
       </div></div></div>`;
   } else if(state.sheet==='cat'){
-    const c=state.catEdit, isMark=c.kind==='mark', isBal=c.kind==='balance', isRate=c.kind==='rating';
-    const kindName=isRate?'valoración':isBal?'balanza':isMark?'marca':'categoría';
+    const c=state.catEdit, isMark=c.kind==='mark', isBal=c.kind==='balance', isRate=c.kind==='rating', isGroup=c.kind==='group', isCat=!c.kind;
+    const kindName=isGroup?'supercategoría':isRate?'valoración':isBal?'balanza':isMark?'marca':'categoría';
     o.innerHTML=`<div class="scrim" data-close><div class="sheet" role="dialog" aria-label="${kindName[0].toUpperCase()+kindName.slice(1)}">
       <div class="handle"></div><h2>${c.id?'Editar ':'Nueva '}${kindName}</h2>
-      <div class="field"><div class="label">Nombre</div><input class="text" id="catName" value="${esc(c.name)}" placeholder="${isRate?'Por ejemplo: Calidad del sueño':isBal?'Por ejemplo: Comentarios de más':isMark?'Por ejemplo: He leído':'Por ejemplo: Lectura'}" maxlength="30" autocomplete="off"></div>
+      <div class="field"><div class="label">Nombre</div><input class="text" id="catName" value="${esc(c.name)}" placeholder="${isGroup?'Por ejemplo: Trabajo':isRate?'Por ejemplo: Calidad del sueño':isBal?'Por ejemplo: Comentarios de más':isMark?'Por ejemplo: He leído':'Por ejemplo: Lectura'}" maxlength="30" autocomplete="off"></div>
       ${isBal?`<div class="field"><div class="label">Los dos lados</div>
         <input class="text" id="balA" value="${esc(c.a||'')}" placeholder="Por ejemplo: Me lo callé" maxlength="24" autocomplete="off">
         <input class="text" id="balB" value="${esc(c.b||'')}" placeholder="Por ejemplo: Lo dije" maxlength="24" autocomplete="off" style="margin-top:8px">
         <p class="desc" style="margin:6px 0 0;font-size:12px;color:var(--ink-3)">Los dos lados de la misma ocasión. Cada vez que se presente, se apunta uno de los dos.</p></div>`:''}
+      ${isGroup?`<div class="field"><div class="label">Categorías</div><div class="catpick">${data.categories.filter(x=>!x.archived||c.cats.includes(x.id)).map(x=>{const other=x.group&&x.group!==c.id&&data.groups.some(g=>g.id===x.group)?groupById(x.group).name:'';
+          return `<button data-gcat="${x.id}" class="${c.cats.includes(x.id)?'on':''}"><i class="dot" style="background:${x.color}"></i>${esc(x.name)}${other?`<span style="font-weight:500;color:var(--ink-3)"> · en ${esc(other)}</span>`:''}</button>`;}).join('')}</div>
+        <p class="desc" style="margin:0;font-size:12px;color:var(--ink-3)">Una categoría solo puede estar en una supercategoría: si ya estaba en otra, se cambia a esta.</p></div>`:''}
+      ${isCat?`<div class="field"><div class="label">Supercategoría</div><div class="catpick"><button data-cgroup="" class="${c.group?'':'on'}">Ninguna</button>${data.groups.map(g=>`<button data-cgroup="${g.id}" class="${g.id===c.group?'on':''}"><i class="dot" style="background:${g.color}"></i>${esc(g.name)}</button>`).join('')}<button data-act="new-group-from-cat" style="background:transparent;border:2px dashed var(--line);color:var(--ink-2)">+ Nueva</button></div></div>`:''}
       <div class="field"><div class="row spread"><div class="label">Icono (opcional)</div><input class="text" id="catIcon" value="${esc(c.icon||'')}" placeholder="emoji" maxlength="4" style="width:80px;text-align:center" autocomplete="off"></div>
         <div class="iconscroll"><div class="iconpick"><button data-icon="" class="${!c.icon?'on':''}" aria-label="Sin icono">∅</button></div>
         ${ICON_GROUPS.map(([n,list])=>`<div class="label" style="margin:8px 0 4px">${n}</div><div class="iconpick">${list.map(i=>`<button data-icon="${i}" class="${i===c.icon?'on':''}">${i}</button>`).join('')}</div>`).join('')}</div></div>
-      <div class="field"><div class="label">Color</div><div class="swatches">${PALETTE.map(h=>`<button data-color="${h}" class="${h===c.color?'on':''}" style="background:${h}" aria-label="${h}"></button>`).join('')}</div></div>
+      <div class="field"><div class="label">Color</div><div class="swatches">${PALETTE.map(h=>`<button data-color="${h}" class="${h===c.color?'on':''}" style="background:${h}" aria-label="${h}"></button>`).join('')}${(()=>{const own=!PALETTE.includes(c.color);return `<label class="${own?'on':''}" id="ownColor" style="${own?'background:'+c.color:''}" title="Otro color"><span>${own?'':'＋'}</span><input type="color" id="catColor" value="${c.color}" aria-label="Otro color"></label>`;})()}</div></div>
       <div class="sheet-actions">
-        ${c.id?(isRate?`<button class="btn sm danger" data-act="rating-delete">Eliminar</button>`:isBal?`<button class="btn sm danger" data-act="balance-delete">Eliminar</button>`:isMark?`<button class="btn sm danger" data-act="mark-delete">Eliminar</button>`:`<button class="btn sm ghost" data-act="cat-archive">${catById(c.id).archived?'Restaurar':'Archivar'}</button><button class="btn sm danger" data-act="cat-delete">Eliminar</button>`):''}
+        ${c.id?`${isGroup?'':`<button class="btn sm ghost" data-act="cat-archive">${kindById(c.kind,c.id).archived?'Restaurar':'Archivar'}</button>`}<button class="btn sm danger" data-act="${isGroup?'group-delete':isRate?'rating-delete':isBal?'balance-delete':isMark?'mark-delete':'cat-delete'}">Eliminar</button>`:''}
         <button class="btn sm ghost" data-close>Cancelar</button><button class="btn sm primary" data-act="cat-save">Guardar</button>
       </div></div></div>`;
     setTimeout(()=>{const i=$('#catName');if(i&&!c.id)i.focus();},50);
@@ -1551,7 +1660,10 @@ function renderSheet(){
       <button class="btn ghost" data-close>Cancelar</button></div></div>`;
   }
 }
-function closeSheet(){state.sheet=null;state.editing=null;state.catEdit=null;state.catDel=null;state.resume=null;state.taskEdit=null;renderSheet();}
+function closeSheet(){
+  // Cancelar la supercategoría creada desde una categoría vuelve a la categoría, no cierra todo.
+  if(state.catReturn&&state.catEdit&&state.catEdit.kind==='group'){ state.catEdit=state.catReturn; state.catReturn=null; renderSheet(); return; }
+  state.sheet=null;state.editing=null;state.catEdit=null;state.catDel=null;state.resume=null;state.taskEdit=null;renderSheet();}
 
 /* ============ Eventos ============ */
 document.addEventListener('click',ev=>{
@@ -1563,14 +1675,14 @@ document.addEventListener('click',ev=>{
   if(d.mark&&d.markday){ if(lp.fired){lp.fired=false;return;} toggleMark(d.mark,+d.markday);render();return;}
   if(d.bal&&d.side){ if(lp.fired){lp.fired=false;return;} addBalance(d.bal,d.side,+d.balday); render(); if(navigator.vibrate) navigator.vibrate(8); return;}
   if(d.balundo){ if(undoBalance(d.balundo,+d.balday)){render();toast('Deshecho el último');} return;}
-  if(d.baledit){const b=balById(d.baledit);state.catEdit={kind:'balance',id:b.id,name:b.name,color:b.color,icon:b.icon||'',a:b.a.label,b:b.b.label};state.sheet='cat';renderSheet();return;}
+  if(d.kedit){openKindEdit(d.kind,d.kedit);return;}
   if(d.rate&&d.rateday){ setRating(d.rate,+d.rateday,+d.rateval); render(); return; }
   if(d.ratename){ if(lp.fired){lp.fired=false;} return; }
-  if(d.rateedit){const r=ratingById(d.rateedit);state.catEdit={kind:'rating',id:r.id,name:r.name,color:r.color,icon:r.icon||''};state.sheet='cat';renderSheet();return;}
-  if(d.markedit){const m=markById(d.markedit);state.catEdit={kind:'mark',id:m.id,name:m.name,color:m.color,icon:m.icon||''};state.sheet='cat';renderSheet();return;}
   if(d.tgroup){state.taskClosed=state.taskClosed.includes(d.tgroup)?state.taskClosed.filter(x=>x!==d.tgroup):state.taskClosed.concat(d.tgroup);render();return;}
   if(d.tdone){const t=data.tasks.find(x=>x.id===d.tdone);if(t){t.done=!t.done;t.doneAt=t.done?Date.now():0;save();render();}return;}
   if(d.task){const t=data.tasks.find(x=>x.id===d.task);if(t){state.taskEdit={id:t.id,text:t.text,cat:t.cat};state.sheet='task';renderSheet();}return;}
+  if(d.gcat){const l=state.catEdit.cats;state.catEdit.cats=l.includes(d.gcat)?l.filter(x=>x!==d.gcat):l.concat(d.gcat);t.classList.toggle('on');return;}
+  if(d.cgroup!=null){state.catEdit.group=d.cgroup||null;document.querySelectorAll('[data-cgroup]').forEach(b=>b.classList.toggle('on',b.dataset.cgroup===d.cgroup));return;}
   if(d.taskcat){state.taskEdit.cat=d.taskcat;document.querySelectorAll('[data-taskcat]').forEach(b=>b.classList.toggle('on',b.dataset.taskcat===d.taskcat));return;}
   if(d.start){ if(lp.fired){lp.fired=false;return;} startCategory(d.start);return;}
   if(d.edit){const e=data.entries.find(x=>x.id===d.edit);if(e)openEditor(e);return;}
@@ -1580,12 +1692,15 @@ document.addEventListener('click',ev=>{
   if(d.range){state.range=+d.range;render();return;}
   if(d.analysis){state.analysis=d.analysis;render();return;}
   if(d.statcat){state.statCat=d.statcat;render();return;}
+  if(d.level){ if(state.level!==d.level){state.level=d.level;state.dayCat=null;state.statCat=null;} render();return;}
+  if(d.dayfilter){state.dayFilter=d.dayfilter;render();return;}
+  if(d.daycat!=null){state.dayCat=d.daycat||null;render();return;}
   if(d.weeks){state.weeks=+d.weeks;render();return;}
   if(d.day){state.selDay=dayStart(+d.day);render();return;}
-  if(d.cat){const c=catById(d.cat);state.catEdit={id:c.id,name:c.name,color:c.color,icon:c.icon||''};state.sheet='cat';renderSheet();return;}
+  if(d.cat){openKindEdit(undefined,d.cat);return;}
   if(d.theme){data.settings.theme=d.theme;save();render();return;}
-  if(d.move){const act=activeCats();const i=act.findIndex(c=>c.id===d.move),j=i+(+d.dir);if(j<0||j>=act.length)return;const gi=data.categories.indexOf(act[i]),gj=data.categories.indexOf(act[j]);[data.categories[gi],data.categories[gj]]=[data.categories[gj],data.categories[gi]];save();render();return;}
-  if(d.unarchive){catById(d.unarchive).archived=false;save();render();return;}
+  if(d.move){const all=d.kind?data[KIND_LIST[d.kind]]:data.categories;const act=all.filter(x=>!x.archived);const i=act.findIndex(c=>c.id===d.move),j=i+(+d.dir);if(j<0||j>=act.length)return;const gi=all.indexOf(act[i]),gj=all.indexOf(act[j]);[all[gi],all[gj]]=[all[gj],all[gi]];save();render();return;}
+  if(d.unarchive){kindById(d.kind,d.unarchive).archived=false;save();render();return;}
   if(d.gran){data.settings.granularity=+d.gran;save();render();return;}
   if(d.bmode){data.settings.backupMode=d.bmode;save();render();return;}
   if(d.insert){openInsertEditor(+d.insert);return;}
@@ -1597,7 +1712,7 @@ document.addEventListener('click',ev=>{
   if(d.snap){state.editing[d.snap]=+d.ms;renderSheet();return;}
   // Icono y color se actualizan en el sitio, sin volver a pintar la hoja: si se repintara,
   // el scroll de emojis saltaría arriba y el foco automático abriría el teclado.
-  if(d.color){state.catEdit.color=d.color;document.querySelectorAll('.swatches button').forEach(b=>b.classList.toggle('on',b.dataset.color===d.color));return;}
+  if(d.color){state.catEdit.color=d.color;document.querySelectorAll('.swatches button').forEach(b=>b.classList.toggle('on',b.dataset.color===d.color));const l=$('#ownColor');if(l){l.classList.remove('on');l.style.background='';l.querySelector('span').textContent='＋';}return;}
   if(d.icon!=null&&state.sheet==='cat'){state.catEdit.icon=d.icon;$('#catIcon').value=d.icon;document.querySelectorAll('.iconpick button').forEach(b=>b.classList.toggle('on',b.dataset.icon===d.icon));return;}
   switch(d.act){
     case 'stop': stopRunningAt(pendEnd()); break;
@@ -1607,7 +1722,7 @@ document.addEventListener('click',ev=>{
     case 'resume-continue': {const rs=state.resume,last=data.entries.find(e=>e.id===rs.id); if(last){last.end=null;} closeSheet(); save(); render(); break;}
     case 'resume-gap': {const rs=state.resume; data.entries.push({id:uid(),cat:rs.cat,start:rs.now,end:null}); sortEntries(); closeSheet(); save(); render(); break;}
     case 'startfrom-cancel': state.startFrom=null; render(); break;
-    case 'edit-cats': state.prevView=state.view; state.view='ajustes'; render(); window.scrollTo(0,0); break;
+    case 'edit-cats': {state.prevView=state.view; state.view='ajustes'; render(); const sec=d.sec&&$('#aj-'+d.sec); if(sec) sec.scrollIntoView({block:'start'}); else window.scrollTo(0,0); break;}
     case 'new-balance': state.catEdit={kind:'balance',id:null,name:'',color:PALETTE.find(h=>!data.balances.some(b=>b.color===h))||PALETTE[0],icon:'',a:'',b:''};state.sheet='cat';renderSheet(); break;
     case 'balance-delete': {
       const id=state.catEdit.id;
@@ -1615,6 +1730,19 @@ document.addEventListener('click',ev=>{
       data.balances=data.balances.filter(b=>b.id!==id);
       data.balanceLog=data.balanceLog.filter(x=>x.bid!==id);
       save(); closeSheet(); render(); break; }
+    case 'new-group': state.catEdit={kind:'group',id:null,name:'',color:PALETTE.find(h=>!data.groups.some(g=>g.color===h))||PALETTE[0],icon:'',cats:[]};state.sheet='cat';renderSheet(); break;
+    case 'new-group-from-cat': {
+      // Se guarda lo escrito en la categoría para volver a ella al terminar con la supercategoría.
+      const ce=state.catEdit; ce.name=$('#catName').value; ce.icon=$('#catIcon').value; state.catReturn=ce;
+      state.catEdit={kind:'group',id:null,name:'',color:PALETTE.find(h=>!data.groups.some(g=>g.color===h))||PALETTE[0],icon:'',cats:ce.id?[ce.id]:[]};
+      renderSheet(); break; }
+    case 'group-delete': {
+      const id=state.catEdit.id;
+      if(!confirm('¿Eliminar esta supercategoría? Sus categorías y registros se conservan, solo quedan sin grupo.')) return;
+      data.groups=data.groups.filter(g=>g.id!==id);
+      for(const c of data.categories) if(c.group===id) c.group=null;
+      save(); closeSheet(); render(); break; }
+    case 'groups-hoy': data.settings.groupsInHoy=!data.settings.groupsInHoy; save(); render(); break;
     case 'new-mark': state.catEdit={kind:'mark',id:null,name:'',color:PALETTE.find(h=>!data.marks.some(m=>m.color===h))||PALETTE[0],icon:''};state.sheet='cat';renderSheet(); break;
     case 'new-rating': state.catEdit={kind:'rating',id:null,name:'',color:PALETTE.find(h=>!data.ratings.some(r=>r.color===h))||PALETTE[0],icon:''};state.sheet='cat';renderSheet(); break;
     case 'rating-delete': {
@@ -1643,7 +1771,7 @@ document.addEventListener('click',ev=>{
     case 'join-prev': {const r=running();const p=prevEntry(r);if(p){r.start=endOf(p);save();render();}break;}
     case 'manual': newManualEntry(dayStart(Date.now())); break;
     case 'manual-day': newManualEntry(state.selDay); break;
-    case 'new-cat': state.catEdit={id:null,name:'',color:PALETTE.find(h=>!data.categories.some(c=>c.color===h))||PALETTE[0],icon:''};state.sheet='cat';renderSheet(); break;
+    case 'new-cat': state.catEdit={id:null,name:'',color:PALETTE.find(h=>!data.categories.some(c=>c.color===h))||PALETTE[0],icon:'',group:null};state.sheet='cat';renderSheet(); break;
     case 'backup': doBackup(); break;
     case 'share': shareBackup(); break;
     case 'export-csv': saveFile(backupName('.csv'),exportCSV()); break;
@@ -1672,6 +1800,20 @@ document.addEventListener('click',ev=>{
       const name=$('#catName').value.trim(); if(!name){toast('Escribe un nombre');return;}
       const icon=$('#catIcon').value.trim();
       const ce=state.catEdit;
+      if(ce.kind==='group'){
+        let g=ce.id&&data.groups.find(x=>x.id===ce.id);
+        if(g){g.name=name;g.color=ce.color;g.icon=icon;} else {g={id:uid(),name,color:ce.color,icon};data.groups.push(g);}
+        const moved=[];
+        for(const c of data.categories){
+          if(ce.cats.includes(c.id)){ if(c.group!==g.id){ if(c.group&&data.groups.some(x=>x.id===c.group)) moved.push(`${c.name} pasa de ${groupById(c.group).name} a ${g.name}`); c.group=g.id; } }
+          else if(c.group===g.id) c.group=null;
+        }
+        save();
+        const back=state.catReturn;
+        if(back){ state.catReturn=null; back.group=(!back.id||ce.cats.includes(back.id))?g.id:(back.id&&catById(back.id).group)||null; state.catEdit=back; renderSheet(); }
+        else { closeSheet(); }
+        render(); if(moved.length) toast(moved.join('; ')); break;
+      }
       if(ce.kind==='balance'){
         const la=$('#balA').value.trim(), lb=$('#balB').value.trim();
         if(!la||!lb){toast('Escribe los dos lados');return;}
@@ -1686,10 +1828,12 @@ document.addEventListener('click',ev=>{
         if(ce.id){const m=markById(ce.id);m.name=name;m.color=ce.color;m.icon=icon;}
         else data.marks.push({id:uid(),name,color:ce.color,icon,archived:false});
       }
-      else if(ce.id){const c=catById(ce.id);c.name=name;c.color=ce.color;c.icon=icon;}
-      else data.categories.push({id:uid(),name,color:ce.color,icon});
+      else if(ce.id){const c=catById(ce.id);c.name=name;c.color=ce.color;c.icon=icon;c.group=ce.group||null;}
+      else data.categories.push({id:uid(),name,color:ce.color,icon,group:ce.group||null});
       save(); closeSheet(); render(); break; }
     case 'cat-archive': {
+      if(state.catEdit.kind){const x=kindById(state.catEdit.kind,state.catEdit.id); x.archived=!x.archived; save(); closeSheet(); render();
+        toast(x.archived?'Archivada: lo apuntado se conserva y deja de verse en Hoy':'Restaurada'); break;}
       const c=catById(state.catEdit.id); c.archived=!c.archived;
       if(c.archived&&activeCats().length===0){c.archived=false;toast('Debe quedar al menos una categoría activa');return;}
       save(); closeSheet(); render(); toast(c.archived?'Categoría archivada: sus registros se conservan':'Categoría restaurada'); break; }
@@ -1714,6 +1858,10 @@ document.addEventListener('change',ev=>{
     if(f==='start'){ if(setRunningStart(ms)) render(); } else setPendEnd(ms);
     return;
   }
+  if(t.id==='catColor'&&state.catEdit){
+    state.catEdit.color=t.value; document.querySelectorAll('.swatches button').forEach(b=>b.classList.remove('on'));
+    const l=$('#ownColor'); l.classList.add('on'); l.style.background=t.value; l.querySelector('span').textContent=''; return;
+  }
   if(t.dataset.tinput){
     const [h,m]=t.value.split(':').map(Number); if(isNaN(h)) return;
     const f=t.dataset.tinput, base=dayStart(state.editing[f]);
@@ -1735,11 +1883,8 @@ document.addEventListener('pointerdown',ev=>{
   lp.el=chip; chip.classList.add('lp'); requestAnimationFrame(()=>{if(lp.el===chip)chip.classList.add('holding');});
   lp.timer=setTimeout(()=>{lp.fired=true; if(navigator.vibrate) navigator.vibrate(15);
     lpClear(); chip.classList.add('lpfired'); chip.addEventListener('animationend',()=>chip.classList.remove('lpfired'),{once:true});
-    const kind=chip.dataset.ratename?'rating':chip.dataset.bal?'balance':chip.dataset.mark?'mark':'cat';
-    const o=kind==='rating'?ratingById(chip.dataset.ratename):kind==='balance'?balById(chip.dataset.bal):kind==='mark'?markById(chip.dataset.mark):catById(chip.dataset.start);
-    state.catEdit={kind,id:o.id,name:o.name,color:o.color,icon:o.icon||''};
-    if(kind==='balance'){state.catEdit.a=o.a.label;state.catEdit.b=o.b.label;}
-    state.sheet='cat'; renderSheet();},500);
+    const kind=chip.dataset.ratename?'rating':chip.dataset.bal?'balance':chip.dataset.mark?'mark':undefined;
+    openKindEdit(kind,chip.dataset.ratename||chip.dataset.bal||chip.dataset.mark||chip.dataset.start);},500);
 });
 document.addEventListener('pointermove',ev=>{ if(lp.timer&&Math.hypot(ev.clientX-lp.x,ev.clientY-lp.y)>10) lpClear(); });
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,lpClear));
@@ -1750,7 +1895,7 @@ window.addEventListener('storage',ev=>{if(ev.key===KEY){data=load();render();}})
 
 // reloj: el cronómetro cada segundo, la barra cada minuto
 setInterval(()=>{const el=$('#elapsed'),r=running();if(el&&r)el.textContent=fmtClock(elapsedOf(r));},1000);
-setInterval(()=>{if(state.view==='hoy'&&!state.sheet)render();},60000);
+setInterval(()=>{if(!state.sheet&&(state.view==='hoy'||state.today!==dayStart(Date.now())))render();},60000);
 render();
 autoBackupIfDue();
 // Service worker solo cuando la app se sirve desde su propio sitio (GitHub Pages), no desde un archivo local.

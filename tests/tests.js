@@ -1,7 +1,7 @@
 ;(function(){
 const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
 const D=86400000,H=3600000,M=60000; const ds=new Date(); ds.setHours(0,0,0,0); const t0=ds.getTime();
-chk('schema 4', data.schema===4);
+chk('schema 5', data.schema===5);
 chk('backupMode off desde autoBackup:false', data.settings.backupMode==='off' && !('autoBackup' in data.settings));
 chk('migrate schema1 autoBackup:true -> auto', migrate({schema:1,settings:{autoBackup:true}}).settings.backupMode==='auto');
 chk('migrate sin settings -> auto', migrate({schema:1}).settings.backupMode==='auto');
@@ -238,7 +238,7 @@ state.view='stats';
 for(const a of ['tipos','huecos']){ state.analysis=a; try{const v=viewStats(); chk('viewStats '+a, v.length>200);}catch(e){chk('viewStats '+a+' '+e.message,false)} }
 state.analysis='resumen'; state.view='hoy'; data.entries=[];
 // Balanzas: contar, deshacer, migrar y no mezclarse con las marcas
-chk('migrate v3 crea balanzas vacías', (()=>{const d=migrate({schema:3});return Array.isArray(d.balances)&&Array.isArray(d.balanceLog)&&d.schema===4;})());
+chk('migrate v3 crea balanzas vacías', (()=>{const d=migrate({schema:3});return Array.isArray(d.balances)&&Array.isArray(d.balanceLog)&&d.schema===5;})());
 chk('migrate rellena los dos lados', (()=>{const d=migrate({schema:4,balances:[{id:'b1',name:'X',color:'#000'}]});return d.balances[0].a.label==='A'&&d.balances[0].b.label==='B'&&d.balances[0].archived===false;})());
 data.balances=[{id:'b1',name:'Comentarios',color:'#2a78d6',icon:'',archived:false,a:{label:'Me lo callé'},b:{label:'Lo dije'}}];
 data.balanceLog=[];
@@ -281,4 +281,33 @@ data.balances=[]; data.balanceLog=[];
   data.entries=[];
 })();
 print('FALLOS7: '+fails);
+})();
+// Supercategorías: nivel de análisis, filtro de días, hojas y rayita en Hoy
+;(function(){
+const chk=(n,f)=>{try{const r=f();print((r?'OK  ':'FAIL')+' '+n+(r===true||r===false?'':' → '+r));}catch(e){print('FAIL '+n+' '+e.message+' '+e.stack.split('\n')[0])}};
+const H=3600000, y=dayStart(Date.now()-86400000);
+data.entries=[{id:'x1',cat:'c1',start:y+9*H,end:y+11*H},{id:'x2',cat:'c2',start:y+11*H,end:y+12*H},{id:'x3',cat:'c3',start:y+12*H,end:y+13*H}];
+data.groups=[{id:'g1',name:'Trabajo',color:'#2a78d6',icon:''}];
+catById('c1').group='g1'; catById('c2').group='g1';
+chk('migrate limpia grupo inexistente', ()=>migrate({schema:4,categories:[{id:'a',group:'zz'}]}).categories[0].group===null);
+state.level='group';
+chk('periodTotals por grupo', ()=>{const t=periodTotals([y]);return t.m.get('g1')===3*H&&t.m.get('__none')===H;});
+for(const a of ['resumen','diatipo','semana','progresion','tipos','huecos']){ chk('stats '+a, ()=>{state.analysis=a;state.view='stats';render();return true;}); }
+chk('diatipo grupo', ()=>{state.dayCat='g1';return statsDiaTipo([y]).includes('Trabajo, hora a hora');});
+state.dayFilter='all'; chk('stats todos', ()=>{render();return true;});
+state.level='cat'; state.dayCat=null;
+chk('ajustes', ()=>viewAjustes().includes('Supercategorías')&&viewAjustes().includes('groups-hoy'));
+chk('hoy rayita', ()=>viewHoy().includes('inset 4px 0 0 #2a78d6'));
+openKindEdit('group','g1'); chk('hoja grupo', ()=>state.catEdit.cats.length===2);
+openKindEdit(undefined,'c1'); chk('hoja cat', ()=>state.catEdit.group==='g1');
+})();
+;(function(){
+const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
+const H=3600000, y=dayStart(Date.now()-3*86400000);
+data.entries.push({id:'r1',cat:'c1',start:y+9*H,end:y+10*H},{id:'r2',cat:'c1',start:y+12*H,end:y+13*H});
+if(!isRest(y)) data.restDays.push(dayKey(y));
+state.dayFilter='work'; chk('huecos: descanso fuera con Laborables', gapsOfDay(y).length===0);
+state.dayFilter='all'; chk('huecos: descanso dentro con Todos', gapsOfDay(y).length===1);
+chk('sin registrar en Registros sigue a cero', unassignedOfDay(y)===0 && unassignedOfDay(y,true)===2*H);
+state.dayFilter='work';
 })();

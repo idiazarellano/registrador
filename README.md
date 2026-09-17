@@ -12,7 +12,7 @@ Aplicación web de un solo archivo (`index.html`) para registrar en qué dedicas
 
 ## Marcas (eventos de sí o no)
 
-Cosas que un día se hacen o no, sin horas ni duración: «he leído», «he tomado la pastilla». Se crean en Hoy o en Ajustes → Marcas, se activan tocándolas (en Hoy para hoy, en Registros para el día elegido) y se editan con una pulsación larga. En Datos aparecen los días marcados del periodo y la racha en marcha.
+Cosas que un día se hacen o no, sin horas ni duración: «he leído», «he tomado la pastilla». Se crean en Hoy o en Ajustes → Marcas, se activan tocándolas (en Hoy para hoy, en Registros para el día elegido) y se editan con una pulsación larga o desde «Editar». Igual que las categorías (y que balanzas y valoraciones), en Ajustes se ordenan con ▲▼ y se archivan sin perder lo apuntado. En la tira de días de Registros y en Datos → Día a día, cada fila lleva a la derecha un punto (o el icono) por marca: lleno si ese día se hizo, hueco si no. En Datos aparecen los días marcados del periodo y la racha en marcha.
 
 ## Balanzas (ocasiones con dos salidas)
 
@@ -23,6 +23,15 @@ En Datos → Resumen aparecen el reparto del periodo y el total de ocasiones, co
 ## Valoraciones (nota del día del 1 al 5)
 
 Un criterio que se puntúa una vez al día: «calidad del sueño», «rendimiento en el trabajo». Se crean en Hoy o en Ajustes → Valoraciones, se puntúan tocando un número (en Hoy para hoy, en Registros para el día elegido; tocar la nota puesta la quita) y se editan con una pulsación larga sobre el nombre. Un día sin nota no cuenta en las medias. En Datos aparecen la media del periodo, la anterior, el reparto de notas y, con al menos dos días de 4–5 y dos de 1–2, las categorías cuya media diaria más cambia entre unos y otros.
+
+## Supercategorías
+
+Agrupan categorías para analizar con menos detalle: «Trabajo» con Programar, Reuniones y Correo; «Familia» con Niños y Comida. Cada categoría está en una sola supercategoría o en ninguna («Sin grupo»), así las horas nunca se cuentan dos veces.
+
+- **Asignar**: desde la ficha de la categoría (selector «Supercategoría», con «+ Nueva») o desde Ajustes → Supercategorías, marcando sus categorías. Si una ya estaba en otra, se cambia de sitio y se avisa.
+- **Hoy**: solo una rayita del color de la supercategoría en el borde de cada categoría. Se quita en Ajustes → «Mostrar en Hoy». Sin supercategorías, Hoy no cambia.
+- **Datos**: el interruptor «Categorías / Supercategorías» cambia todos los análisis de nivel. Tareas y Registros siguen siempre por categoría.
+- Los registros no guardan la supercategoría: se deduce al calcular, así mover una categoría de grupo rehace todo el histórico.
 
 ## Tareas
 
@@ -87,15 +96,15 @@ Regla de la inserción: los dos vecinos se ajustan al nuevo registro (se acortan
 
 ## Datos: los cuatro análisis
 
-Arriba de la pantalla se elige el tipo de análisis; la fila de debajo cambia con él (periodo en los tres primeros, categoría y número de semanas en Progresión).
+Arriba de la pantalla se elige el tipo de análisis; la fila de debajo cambia con él (periodo en los tres primeros, categoría y número de semanas en Progresión). Debajo, dos interruptores valen para todos: «Categorías / Supercategorías» (solo si hay supercategorías) y «Laborables / Todos»: Laborables deja fuera los días de descanso 🌴 y Todos los incluye, también en las medias.
 
 - **Resumen**: totales por categoría con porcentaje, media por día y comparación con el periodo anterior (▲▼), marcas, balanzas, valoraciones y día a día.
-- **Día tipo**: 24 columnas, una por hora. Cada una reparte por categoría el tiempo registrado en esa hora a lo largo del periodo; lo que le falta para llegar arriba es tiempo sin registrar. Enseña la rutina: a qué hora empiezas de verdad, cuándo se rompe la tarde.
-- **Semana**: media de cada día de la semana, apilada por categoría. No cuenta los días de descanso.
+- **Día tipo**: 24 columnas, una por hora. Con «Todas» se apilan las categorías; eligiendo una se ve solo su reparto por horas, escalado a su hora más cargada, con la franja que concentra la mitad de su tiempo. Cada una reparte por categoría el tiempo registrado en esa hora a lo largo del periodo; lo que le falta para llegar arriba es tiempo sin registrar. Enseña la rutina: a qué hora empiezas de verdad, cuándo se rompe la tarde.
+- **Semana**: media de cada día de la semana, apilada por categoría. Con «Laborables», sin los días de descanso.
 - **Progresión**: una barra por semana de una categoría (12, 26 o 52 semanas) y la línea de la media de cuatro semanas, más una frase con las últimas cuatro semanas frente a las cuatro anteriores. La semana en curso no aparece hasta que termina.
 
 - **Tipos**: agrupa los días del periodo según **cómo** repartes el tiempo (no cuánto registras) con k-medias, eligiendo entre 2 y 4 grupos por silueta. Cada grupo se describe con sus categorías dominantes, cuántos días tiene y en qué días de la semana cae; debajo, una tira con un cuadro por día y un mapa (PCA a dos componentes) donde los días parecidos caen juntos. Necesita al menos 12 días con dos horas registradas o no se dibuja. El arranque de k-medias lleva semilla fija, así que los mismos datos dan siempre el mismo resultado.
-- **Huecos**: cuánto tiempo queda sin registrar, a qué hora se escapa, detrás de qué actividad y cómo de largos son los huecos. Se cuentan igual que "Sin registrar": solo entre el primer y el último registro del día, nunca en días de descanso.
+- **Huecos**: cuánto tiempo queda sin registrar, a qué hora se escapa, detrás de qué actividad y cómo de largos son los huecos. Se cuentan igual que "Sin registrar": solo entre el primer y el último registro del día; los días de descanso solo cuentan con «Todos». En Hoy y en Registros nunca se cuentan.
 
 Ninguna vista lleva categorías escritas a mano: todas recorren las que existan en cada momento. Y en Progresión no hay metas, ni rachas, ni colores de aprobado o suspenso: la unidad es la semana justamente para que un día malo no rompa nada.
 
@@ -111,8 +120,9 @@ Bajo la barra del día seleccionado en Registros y en Totales · N días aparece
 
 ```json
 {
-  "schema": 4,
-  "categories": [{"id": "c1", "name": "Trabajo", "color": "#2a78d6"}],
+  "schema": 5,
+  "categories": [{"id": "c1", "name": "Trabajo", "color": "#2a78d6", "group": "g1"}],
+  "groups": [{"id": "g1", "name": "Trabajo", "color": "#1c4fa0", "icon": "💼"}],
   "entries": [{"id": "abc", "cat": "c1", "start": 1757059200000, "end": 1757062800000}],
   "restDays": ["2026-09-06"],
   "marks": [{"id": "m1", "name": "He leído", "color": "#3fa34d", "icon": "📖"}],
