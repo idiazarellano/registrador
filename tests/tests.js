@@ -330,6 +330,6 @@ const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
 state.view='stats'; state.range=30; state.level='group'; render();
 const v=JSON.parse(storeMap['registrador.v1.view']||'{}');
 chk('Datos recuerda lo elegido', v.range===30&&v.level==='group');
-chk('nivel con las dos palabras', viewStats().includes('data-level="group" aria-label="Ver por supercategorías; toca para cambiar"'));
+chk('nivel con las dos palabras', viewStats().includes('<span class="">Categorías</span><span class="on">Supercategorías</span>'));
 state.range=7; state.level='cat'; state.view='hoy'; render();
 })();
