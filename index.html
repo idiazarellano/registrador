@@ -1517,7 +1517,10 @@ function render(){
   if(state.today!==today){ if(state.today!=null) state.selDay=today; state.today=today; }
   const v=$('#view');
   if(state.view==='stats') saveViewPrefs();
+  // Al repintar se conserva el desplazamiento de las pestañas de Datos, para que no salten al principio.
+  const tabs=$('.atabs',v), tabsX=tabs?tabs.scrollLeft:0;
   v.innerHTML={hoy:viewHoy,tareas:viewTareas,registros:viewRegistros,stats:viewStats,ajustes:viewAjustes}[state.view]();
+  if(tabsX){const t=$('.atabs',v); if(t) t.scrollLeft=tabsX;}
   renderTabs(); renderSheet();
 }
 
