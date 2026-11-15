@@ -284,6 +284,7 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .dayrow.on{background:var(--surface-2)}
 .dayrow.rest .d{color:var(--ink-3)}
 .dayrow.rest .d::before{content:'🌴 '}
+.dayrow.invalid .d{color:var(--ink-3);text-decoration:line-through}
 .restbtn{font-size:12px;font-weight:700;color:var(--ink-3);padding:4px 8px;border-radius:8px;border:1px solid var(--surface-2);white-space:nowrap}
 .restbtn.on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .dayrow .d{font-size:12px;font-weight:700;color:var(--ink-2);line-height:1.15}
@@ -397,6 +398,7 @@ function defaultData(){
       {id:'c8',name:'Sueño',color:'#6b7280',icon:'😴'}],
     entries:[],
     restDays:[],
+    invalidDays:[], // días que no cuentan en Datos (registro incompleto)
     marks:[],      // eventos de sí/no: {id,name,icon,color,archived}
     markDays:{},   // 'AAAA-MM-DD' -> [id de marca]
     tasks:[],      // recordatorios: {id,cat,text,done,created,doneAt}
@@ -414,6 +416,7 @@ function migrate(d){
   d.categories=Array.isArray(d.categories)?d.categories:[];
   d.entries=Array.isArray(d.entries)?d.entries:[];
   d.restDays=Array.isArray(d.restDays)?d.restDays:[];
+  d.invalidDays=Array.isArray(d.invalidDays)?d.invalidDays:[];
   d.marks=Array.isArray(d.marks)?d.marks:[];
   d.markDays=(d.markDays&&typeof d.markDays==='object')?d.markDays:{};
   d.tasks=Array.isArray(d.tasks)?d.tasks:[];
@@ -661,15 +664,16 @@ function backupPending(){
 function autoBackupIfDue(){ if(data.settings.backupMode==='auto'&&backupPending()&&!state.sheet) doBackup(true); }
 /* Borrado de registros con red de seguridad: copia descargada + papelera interna. */
 function wipeEntries(){
-  try{localStorage.setItem(KEY_TRASH,JSON.stringify({date:Date.now(),entries:data.entries,restDays:data.restDays,markDays:data.markDays,balanceLog:data.balanceLog,ratingDays:data.ratingDays}));}
+  try{localStorage.setItem(KEY_TRASH,JSON.stringify({date:Date.now(),entries:data.entries,restDays:data.restDays,invalidDays:data.invalidDays,markDays:data.markDays,balanceLog:data.balanceLog,ratingDays:data.ratingDays}));}
   catch(e){toast('No se pudo guardar la papelera: '+e.message);return false;}
-  data.entries=[]; data.restDays=[]; data.markDays={}; data.balanceLog=[]; data.ratingDays={}; save(); return true;
+  data.entries=[]; data.restDays=[]; data.invalidDays=[]; data.markDays={}; data.balanceLog=[]; data.ratingDays={}; save(); return true;
 }
 function undoWipe(){
   const t=trash(); if(!t){toast('La papelera está vacía');return;}
   const ids=new Set(data.entries.map(e=>e.id)); let n=0;
   for(const e of t.entries) if(!ids.has(e.id)){data.entries.push(e);n++;}
   for(const k of t.restDays||[]) if(!data.restDays.includes(k)) data.restDays.push(k);
+  for(const k of t.invalidDays||[]) if(!data.invalidDays.includes(k)) data.invalidDays.push(k);
   for(const k of Object.keys(t.markDays||{})) if(!data.markDays[k]) data.markDays[k]=t.markDays[k];
   for(const k of Object.keys(t.ratingDays||{})) data.ratingDays[k]=Object.assign({},t.ratingDays[k],data.ratingDays[k]||{});
   {const bids=new Set(data.balanceLog.map(x=>x.id)); for(const x of t.balanceLog||[]) if(!bids.has(x.id)) data.balanceLog.push(x);}
@@ -690,6 +694,7 @@ function importJSON(text,mode){
     const ids=new Map(data.entries.map(e=>[e.id,e]));
     let n=0; for(const e of d.entries){ if(!ids.has(e.id)){data.entries.push(e);n++;} }
     for(const k of d.restDays) if(!data.restDays.includes(k)) data.restDays.push(k);
+    for(const k of d.invalidDays) if(!data.invalidDays.includes(k)) data.invalidDays.push(k);
     const bals=new Set(data.balances.map(b=>b.id)); for(const b of d.balances) if(!bals.has(b.id)) data.balances.push(b);
     const blog=new Set(data.balanceLog.map(x=>x.id)); for(const x of d.balanceLog) if(!blog.has(x.id)) data.balanceLog.push(x);
     const mks=new Set(data.marks.map(m=>m.id)); for(const m of d.marks) if(!mks.has(m.id)) data.marks.push(m);
@@ -704,10 +709,10 @@ function importJSON(text,mode){
 
 /* ============ Interfaz ============ */
 const RESUME_WINDOW=HOUR; // misma categoría dentro de esta ventana: se ofrece unir
-const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,pendEnd:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[],analysis:'resumen',statCat:null,weeks:26,dayCat:null,level:'cat',dayFilter:'work'};
+const state={view:'hoy',prevView:'hoy',range:7,startFrom:null,pendEnd:null,selDay:dayStart(Date.now()),sheet:null,editing:null,catEdit:null,taskEdit:null,taskClosed:[],analysis:'resumen',statCat:null,weeks:26,dayCat:null,level:'cat',dayFilter:'work',withInvalid:false};
 /* Lo elegido en Datos se recuerda en este dispositivo. Va en una clave aparte y no en `data`,
    para que cambiar de vista no cuente como un cambio pendiente de copia de seguridad. */
-const KEY_VIEW='registrador.v1.view', VIEW_PREFS=['range','weeks','dayFilter','level','dayCat','statCat','analysis'];
+const KEY_VIEW='registrador.v1.view', VIEW_PREFS=['range','weeks','dayFilter','withInvalid','level','dayCat','statCat','analysis'];
 try{ const v=JSON.parse(localStorage.getItem(KEY_VIEW)||'{}'); for(const k of VIEW_PREFS) if(v[k]!==undefined) state[k]=v[k]; }catch(_){}
 function saveViewPrefs(){ try{ const v={}; for(const k of VIEW_PREFS) v[k]=state[k]; localStorage.setItem(KEY_VIEW,JSON.stringify(v)); }catch(_){} }
 const $=(s,el=document)=>el.querySelector(s);
@@ -768,6 +773,11 @@ function entriesListHTML(ds,withGaps){
 }
 function isRest(ds){return data.restDays.includes(dayKey(ds));}
 function toggleRest(ds){const k=dayKey(ds);if(isRest(ds))data.restDays=data.restDays.filter(x=>x!==k);else data.restDays.push(k);save();}
+function isInvalid(ds){return data.invalidDays.includes(dayKey(ds));}
+function toggleInvalid(ds){const k=dayKey(ds);if(isInvalid(ds))data.invalidDays=data.invalidDays.filter(x=>x!==k);else data.invalidDays.push(k);save();}
+function invalidBtn(ds){return `<button class="restbtn ${isInvalid(ds)?'on':''}" data-invalid="${ds}" aria-pressed="${isInvalid(ds)}" title="Día incompleto: no cuenta en Datos">⚠️ No válido</button>`;}
+/* Día excluido de Datos según los interruptores «Con 🌴» y «Con ⚠️». */
+function skipDay(ds){ return (state.dayFilter!=='all'&&isRest(ds))||(!state.withInvalid&&isInvalid(ds)); }
 function restBtn(ds){return `<button class="restbtn ${isRest(ds)?'on':''}" data-rest="${ds}" aria-pressed="${isRest(ds)}" title="Marcar como día de descanso">🌴 Descanso</button>`;}
 /* Huecos entre registros de un día (y, si es hoy y no hay nada en marcha, desde el último hasta ahora).
    En días de descanso no se cuenta. No forma parte del total registrado. */
@@ -1004,7 +1014,7 @@ function viewHoy(){
         return `<div class="gaphint"><span class="grow">Desde ${when} hay <strong class="num">${fmtDur(gap)}</strong> sin registrar.</span>
           <span class="row"><button class="btn sm" data-gap-start="${last.end}" data-gap-end="${roundTo(Date.now())}">Rellenar</button>${gap<HOUR?`<button class="btn sm primary" data-act="startfrom" data-ms="${last.end}">Seguir desde las ${fmtTime(last.end)}</button>`:''}</span></div>`;})()}
    </div>`;
-  return `<div class="topbar"><h1>${fmtDayLong(ds)}</h1><span class="row" style="gap:8px;align-items:center"><span class="sub num">${total?fmtDur(total)+' registradas':''}</span>${restBtn(ds)}${gearBtn}</span></div>
+  return `<div class="topbar"><h1>${fmtDayLong(ds)}</h1><span class="row" style="gap:8px;align-items:center"><span class="sub num">${total?fmtDur(total)+' registradas':''}</span>${restBtn(ds)}${invalidBtn(ds)}${gearBtn}</span></div>
     ${banner}
     <div>${dayBarHTML(ds)}</div>
     ${nowPanel}
@@ -1034,13 +1044,13 @@ function viewRegistros(){
       <div class="section-head"><h2>Elige un día</h2></div>
       <div class="dayrows" style="margin-top:10px">${days.map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
-        return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''}" data-day="${ds}" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
+        return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''} ${isInvalid(ds)?'invalid':''}" data-day="${ds}" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
       <div class="ticks" style="padding-left:66px;padding-right:${mc.w?mc.w+16:6}px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
       <div class="legend" style="margin-top:10px">${data.categories.filter(c=>shown.has(c.id)).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>
       ${marksLegendHTML(mc)}
     </section>
     <section class="card">
-      <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><span class="row" style="gap:8px;align-items:center;justify-content:center;flex:1"><h2 style="font-size:14px;font-weight:800">${fmtDayLong(state.selDay)}</h2>${restBtn(state.selDay)}</span><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
+      <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><span class="row" style="gap:8px;align-items:center;justify-content:center;flex:1"><h2 style="font-size:14px;font-weight:800">${fmtDayLong(state.selDay)}</h2>${restBtn(state.selDay)}${invalidBtn(state.selDay)}</span><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
       <div style="margin:10px 0 12px">${dayBarHTML(state.selDay)}${dayTotalsHTML(state.selDay)}</div>
       ${activeMarks().length?`<div class="section-head" style="margin-bottom:8px"><h2>Marcas</h2></div>${marksRowHTML(state.selDay)}`:''}
       ${activeBalances().length?`<div class="section-head" style="margin:12px 0 4px"><h2>Balanzas</h2></div>${balancesHTML(state.selDay)}`:''}
@@ -1127,7 +1137,7 @@ function statsResumen(statDays,n){
       <div class="section-head"><h2>Día a día</h2><span class="label">toca para editarlo</span></div>
       <div class="dayrows" style="margin-top:10px">${statDays.slice().reverse().map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
-        return `<button class="dayrow ${isRest(ds)?'rest':''}" data-day="${ds}" data-goto="registros" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true,unit:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
+        return `<button class="dayrow ${isRest(ds)?'rest':''} ${isInvalid(ds)?'invalid':''}" data-day="${ds}" data-goto="registros" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true,unit:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
       ${marksLegendHTML(mc)}
     </section>`;
 }
@@ -1209,7 +1219,7 @@ function statsProgresion(){
   for(let i=W;i>=1;i--){
     const d=new Date(cw), ws=new Date(d.getFullYear(),d.getMonth(),d.getDate()-7*i).getTime();
     let ms=0;
-    for(let k=0;k<7;k++){ const ds=dayStart(ws+k*DAY+HOUR*12); if(state.dayFilter==='work'&&isRest(ds)) continue; for(const [a,b] of unitSpans(ds,id)) ms+=b-a; }
+    for(let k=0;k<7;k++){ const ds=dayStart(ws+k*DAY+HOUR*12); if(skipDay(ds)) continue; for(const [a,b] of unitSpans(ds,id)) ms+=b-a; }
     weeks.push({ws,ms});
   }
   const avg4=weeks.map((_,i)=>{const a=weeks.slice(Math.max(0,i-3),i+1);return a.reduce((x,w)=>x+w.ms,0)/a.length;});
@@ -1376,7 +1386,7 @@ function statsTipos(days){
    registro y detrás de qué actividad. Se cuentan igual que en "Sin registrar":
    solo entre el primer y el último registro del día; los días de descanso, solo con el filtro «Todos». */
 function gapsOfDay(ds){
-  if(isRest(ds)&&state.dayFilter!=='all') return []; // en Datos, con «Todos», también cuentan los de descanso
+  if(skipDay(ds)) return []; // en Datos, con «Todos», también cuentan los de descanso
   const de=dayEnd(ds);
   const segs=entriesOfDay(ds).map(e=>({a:Math.max(e.start,ds),b:Math.min(endOf(e),de),cat:e.cat})).filter(x=>x.b>x.a).sort((p,q)=>p.a-q.a);
   if(!segs.length) return [];
@@ -1436,7 +1446,7 @@ function unitBtn(attr){
 }
 const ANALYSES=[['resumen','Resumen'],['diatipo','Día'],['semana','Semana'],['progresion','Progreso'],['tipos','Tipos'],['huecos','Huecos']];
 /* «Laborables» deja fuera los días de descanso en todos los análisis; «Todos» los incluye. */
-function filterDays(list){ if(state.dayFilter==='work'){ const k=list.filter(ds=>!isRest(ds)); list.length=0; list.push(...k); } return list; }
+function filterDays(list){ const k=list.filter(ds=>!skipDay(ds)); list.length=0; list.push(...k); return list; }
 function viewStats(){
   if(!data.groups.length) state.level='cat';
   const today=dayStart(Date.now()), n=state.range, a=state.analysis;
@@ -1450,6 +1460,7 @@ function viewStats(){
       <div class="statrow">
         <label class="periodsel" title="${prog?'La semana en curso no cuenta hasta que termine.':`${fmtDayLong(allDays[n-1])} → ${fmtDayLong(allDays[0])}. Hoy no cuenta hasta que termine.`}"><select id="periodSel" data-period="${prog?'weeks':'range'}" aria-label="Periodo">${opts.map(([k,l,on])=>`<option value="${k}" ${on?'selected':''}>${l}</option>`).join('')}</select></label>
         <button class="toggle" data-act="toggle-rest" aria-pressed="${state.dayFilter==='all'}" title="${state.dayFilter==='all'?'Se cuentan también los días de descanso':'Solo días laborables'}">Con 🌴</button>
+        <button class="toggle" data-act="toggle-invalid" aria-pressed="${!!state.withInvalid}" title="${state.withInvalid?'Se cuentan también los días no válidos':'Los días no válidos no cuentan'}">Con ⚠️</button>
         ${data.groups.length?`<button class="stack" data-level="${byGroup()?'cat':'group'}" aria-label="Ver por ${byGroup()?'supercategorías':'categorías'}; toca para cambiar">${[['cat','Categorías'],['group','Supercat.']].map(([k,l])=>`<span class="${state.level===k?'on':'off'}" aria-hidden="${state.level!==k}">${l}</span>`).join('')}</button>`:''}
       </div>
 
@@ -1768,6 +1779,7 @@ document.addEventListener('click',ev=>{
   if(d.gran){data.settings.granularity=+d.gran;save();render();return;}
   if(d.bmode){data.settings.backupMode=d.bmode;save();render();return;}
   if(d.insert){openInsertEditor(+d.insert);return;}
+  if(d.invalid){toggleInvalid(+d.invalid);render();toast(isInvalid(+d.invalid)?'Día marcado como no válido: no cuenta en Datos':'El día vuelve a contar');return;}
   if(d.rest){toggleRest(+d.rest);render();toast(isRest(+d.rest)?'Marcado como día de descanso':'Ya no es día de descanso');return;}
   // sheet: editor
   if(d.pick){state.editing.cat=d.pick;renderSheet();return;}
@@ -1794,6 +1806,7 @@ document.addEventListener('click',ev=>{
       data.balances=data.balances.filter(b=>b.id!==id);
       data.balanceLog=data.balanceLog.filter(x=>x.bid!==id);
       save(); closeSheet(); render(); break; }
+    case 'toggle-invalid': state.withInvalid=!state.withInvalid; saveViewPrefs(); render(); break;
     case 'toggle-rest': state.dayFilter=state.dayFilter==='all'?'work':'all'; render(); break;
 
     case 'unit-pick': state.unitFor=d.for; state.sheet='unitpick'; renderSheet(); break;

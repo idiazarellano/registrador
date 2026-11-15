@@ -348,3 +348,12 @@ chk('huecos en Progreso', ()=>{state.statCat='__gaps';state.weeks=12;return stat
 chk('botón Con 🌴', ()=>viewStats().includes('>Con 🌴</button>'));
 state.statCat=null;
 })();
+;(function(){
+const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
+const d1=dayStart(Date.now())-2*86400000+3600000*12, d2=d1-86400000;
+data.invalidDays=[]; data.restDays=[]; toggleInvalid(d1);
+state.withInvalid=false; chk('no válido fuera de Datos', filterDays([d1,d2]).length===1);
+state.withInvalid=true; chk('Con ⚠️ lo incluye', filterDays([d1,d2]).length===2);
+state.withInvalid=false; toggleInvalid(d1); chk('desmarcar', !isInvalid(d1));
+try{ state.view='stats'; viewStats(); chk('viewStats con ⚠️', viewStats().includes('toggle-invalid')); }catch(e){print('FAIL viewStats '+e.message)}
+})();
