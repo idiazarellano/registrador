@@ -6,7 +6,7 @@ Aplicación web de un solo archivo (`index.html`) para registrar en qué dedicas
 
 - **Hoy**: lo que está en marcha, las categorías, las marcas, las balanzas y las valoraciones del día y los registros de hoy.
 - **Tareas**: recordatorios agrupados por categoría, en listas desplegables.
-- **Registros**: elegir un día y editarlo (barra, totales, huecos, marcas, balanzas, valoraciones, día de descanso o no válido). Tocando la fecha se salta a cualquier día. Al final, una nota libre del día (los días con nota llevan 📝 en la tira).
+- **Registros**: elegir un día y editarlo (barra, totales, huecos, marcas, balanzas, valoraciones, día de descanso o no válido). Tocando la fecha se salta a cualquier día; «Todos» lista todos los registros, del más reciente al más antiguo, para editar cualquiera. Al final, las notas del día: «+ Añadir nota» y × para quitar (los días con notas llevan 📝 en la tira).
 - **Datos**: estadísticas de días completos: por categoría, medias, comparación con el periodo anterior, marcas, balanzas, valoraciones y día a día.
 - **Ajustes**: el engranaje de la esquina superior derecha (ya no ocupa pestaña).
 

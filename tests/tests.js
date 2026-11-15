@@ -375,11 +375,13 @@ chk('reconoce la categoría del sueño', sleepCat()==='c8');
 ;(function(){
 const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
 const ds=dayStart(Date.now())-40*86400000+3600000*12;
-data.dayNotes={}; data.dayNotes[dayKey(ds)]='nota de prueba';
+data.dayNotes={}; data.dayNotes[dayKey(ds)]=[{id:'x1',text:'nota de prueba',t:0}];
 state.selDay=dayStart(ds); let h=''; try{ h=viewRegistros(); }catch(e){ print('FAIL viewRegistros '+e.message); }
 chk('Registros: nota y selector de fecha', h.includes('nota de prueba') && h.includes('id="dayPick"'));
 chk('botones solo icono', restBtn(ds).includes('>🌴</button>') && invalidBtn(ds).includes('>⚠️</button>'));
 data.ratings=[{id:'rz',name:'Foco',color:'#000',icon:'',archived:false,desc:'1 disperso · 5 absorto'}];
-chk('descripción de valoración visible', ratingsHTML(ds).includes('1 disperso · 5 absorto'));
+chk('descripción solo tras ⓘ', ratingsHTML(ds).includes('data-rateinfo="rz"') && !ratingsHTML(ds).includes('>1 disperso'));
+chk('notas antiguas en texto pasan a lista', Array.isArray(migrate({dayNotes:{'2026-01-01':'hola'}}).dayNotes['2026-01-01']));
+state.regAll=true; let ha=''; try{ ha=viewRegistros(); }catch(e){ print('FAIL Todos '+e.message); } chk('Registros: modo Todos', ha.includes('data-edit=') && ha.includes('Por día')); state.regAll=false;
 chk('migrate añade dayNotes', typeof migrate({}).dayNotes==='object');
 })();

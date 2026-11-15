@@ -288,7 +288,11 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .datepick{position:relative;cursor:pointer}
 .datepick input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
 .daynote{width:100%;margin-top:8px;resize:vertical;font:inherit;font-size:14px;line-height:1.4}
-.ratename small{display:block;font-size:11px;font-weight:500;color:var(--ink-3);white-space:normal}
+.rateinfo{flex:0 0 auto;width:26px;height:26px;border-radius:50%;color:var(--ink-3);font-size:15px;margin-left:-6px}
+.daynote-item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.4}
+.daynote-item span{flex:1;min-width:0;overflow-wrap:anywhere}
+.daynote-item button{flex:0 0 auto;width:28px;height:28px;border-radius:50%;color:var(--ink-3);font-size:18px;line-height:1}
+.regmode{display:flex;gap:4px;margin:0 0 12px}
 .restbtn{font-size:12px;font-weight:700;color:var(--ink-3);padding:4px 8px;border-radius:8px;border:1px solid var(--surface-2);white-space:nowrap}
 .restbtn.on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .dayrow .d{font-size:12px;font-weight:700;color:var(--ink-2);line-height:1.15}
@@ -403,7 +407,7 @@ function defaultData(){
     entries:[],
     restDays:[],
     invalidDays:[], // días que no cuentan en Datos (registro incompleto)
-    dayNotes:{},    // 'AAAA-MM-DD' -> texto libre
+    dayNotes:{},    // 'AAAA-MM-DD' -> [{id,text,t}]
     marks:[],      // eventos de sí/no: {id,name,icon,color,archived}
     markDays:{},   // 'AAAA-MM-DD' -> [id de marca]
     tasks:[],      // recordatorios: {id,cat,text,done,created,doneAt}
@@ -423,6 +427,7 @@ function migrate(d){
   d.restDays=Array.isArray(d.restDays)?d.restDays:[];
   d.invalidDays=Array.isArray(d.invalidDays)?d.invalidDays:[];
   d.dayNotes=(d.dayNotes&&typeof d.dayNotes==='object')?d.dayNotes:{};
+  for(const k of Object.keys(d.dayNotes)){ const v=d.dayNotes[k]; if(typeof v==='string') d.dayNotes[k]=v?[{id:'n'+k,text:v,t:0}]:[]; else if(!Array.isArray(v)) d.dayNotes[k]=[]; if(!d.dayNotes[k].length) delete d.dayNotes[k]; }
   d.marks=Array.isArray(d.marks)?d.marks:[];
   d.markDays=(d.markDays&&typeof d.markDays==='object')?d.markDays:{};
   d.tasks=Array.isArray(d.tasks)?d.tasks:[];
@@ -681,7 +686,7 @@ function undoWipe(){
   for(const e of t.entries) if(!ids.has(e.id)){data.entries.push(e);n++;}
   for(const k of t.restDays||[]) if(!data.restDays.includes(k)) data.restDays.push(k);
   for(const k of t.invalidDays||[]) if(!data.invalidDays.includes(k)) data.invalidDays.push(k);
-  for(const k of Object.keys(t.dayNotes||{})) if(!data.dayNotes[k]) data.dayNotes[k]=t.dayNotes[k];
+  for(const k of Object.keys(t.dayNotes||{})) {const a=data.dayNotes[k]||[], ids=new Set(a.map(n=>n.id)); data.dayNotes[k]=a.concat(t.dayNotes[k].filter(n=>!ids.has(n.id)));}
   for(const k of Object.keys(t.markDays||{})) if(!data.markDays[k]) data.markDays[k]=t.markDays[k];
   for(const k of Object.keys(t.ratingDays||{})) data.ratingDays[k]=Object.assign({},t.ratingDays[k],data.ratingDays[k]||{});
   {const bids=new Set(data.balanceLog.map(x=>x.id)); for(const x of t.balanceLog||[]) if(!bids.has(x.id)) data.balanceLog.push(x);}
@@ -703,7 +708,7 @@ function importJSON(text,mode){
     let n=0; for(const e of d.entries){ if(!ids.has(e.id)){data.entries.push(e);n++;} }
     for(const k of d.restDays) if(!data.restDays.includes(k)) data.restDays.push(k);
     for(const k of d.invalidDays) if(!data.invalidDays.includes(k)) data.invalidDays.push(k);
-    for(const k of Object.keys(d.dayNotes)) if(!data.dayNotes[k]) data.dayNotes[k]=d.dayNotes[k];
+    for(const k of Object.keys(d.dayNotes)) {const a=data.dayNotes[k]||[], ids=new Set(a.map(n=>n.id)); data.dayNotes[k]=a.concat(d.dayNotes[k].filter(n=>!ids.has(n.id)));}
     const bals=new Set(data.balances.map(b=>b.id)); for(const b of d.balances) if(!bals.has(b.id)) data.balances.push(b);
     const blog=new Set(data.balanceLog.map(x=>x.id)); for(const x of d.balanceLog) if(!blog.has(x.id)) data.balanceLog.push(x);
     const mks=new Set(data.marks.map(m=>m.id)); for(const m of d.marks) if(!mks.has(m.id)) data.marks.push(m);
@@ -940,7 +945,7 @@ function setRating(id,ds,v){ // tocar la nota que ya tiene la quita
 function ratingsHTML(ds){
   const rs=activeRatings(); if(!rs.length) return '';
   return `<div class="ratings">${rs.map(r=>{const v=ratingOf(r.id,ds);
-    return `<div class="rating" style="--rc:${r.color}"><button class="ratename" data-ratename="${r.id}">${r.icon?r.icon+' ':''}${esc(r.name)}${r.desc?`<small>${esc(r.desc)}</small>`:''}</button>
+    return `<div class="rating" style="--rc:${r.color}"><button class="ratename" data-ratename="${r.id}">${r.icon?r.icon+' ':''}${esc(r.name)}</button>${r.desc?`<button class="rateinfo" data-rateinfo="${r.id}" aria-label="Qué mide ${esc(r.name)}" title="${esc(r.desc)}">ⓘ</button>`:''}
       <div class="ratedots">${[1,2,3,4,5].map(n=>`<button class="num ${v&&n<=v?'on':''} ${v===n?'sel':''}" data-rate="${r.id}" data-rateval="${n}" data-rateday="${ds}" aria-label="${n}" aria-pressed="${v===n}">${n}</button>`).join('')}</div></div>`;}).join('')}</div>`;
 }
 /* Relaciones entre cada valoración y el tiempo de cada categoría (o supercategoría, según el nivel).
@@ -1092,19 +1097,31 @@ function viewHoy(){
 }
 
 /* Registros: navegar por los días y editarlos. Las estadísticas viven aparte. */
+/* «Todos»: todos los registros, del más reciente al más antiguo, agrupados por día (de 14 en 14 días). */
+function regModeHTML(){ return `<div class="seg-control regmode">${[[false,'Por día'],[true,'Todos']].map(([k,l])=>`<button ${!!state.regAll===k?'':'data-act="reg-mode"'} aria-pressed="${!!state.regAll===k}">${l}</button>`).join('')}</div>`; }
+function viewRegistrosAll(){
+  const ks=[...new Set(data.entries.filter(e=>endOf(e)>e.start).map(e=>dayKey(e.start)))].sort().reverse();
+  const N=state.regAllN||14, shown=ks.slice(0,N);
+  return `<div class="topbar"><h1>Registros</h1>${gearBtn}</div>${regModeHTML()}
+    ${shown.length?shown.map(k=>{const [y,m,d]=k.split('-').map(Number), ds=new Date(y,m-1,d).getTime(); let t=0; for(const g of segmentsOfDay(ds)) t+=g.ms;
+      return `<div class="section-head" style="margin-top:14px"><h2><button class="linkbtn" data-day="${ds+HOUR*12}" style="font:inherit;color:inherit;padding:0">${fmtDayLong(ds)}</button></h2><span class="sub num" style="font-size:12px;color:var(--ink-3)">${fmtDur(t)}${isRest(ds)?' · 🌴':''}${isInvalid(ds)?' · ⚠️':''}</span></div>${entriesListHTML(ds,false)}`;}).join('')
+      :'<p class="empty">Todavía no hay registros.</p>'}
+    ${ks.length>N?`<button class="btn sm ghost" data-act="reg-more" style="margin:16px auto;display:block">Ver ${Math.min(14,ks.length-N)} días más (quedan ${ks.length-N})</button>`:''}`;
+}
 function viewRegistros(){
+  if(state.regAll) return viewRegistrosAll();
   const today=dayStart(Date.now()), sel=state.selDay;
   // La tira muestra 14 días; si el día elegido queda fuera, se desplaza para incluirlo.
   const stripEnd = sel>today-13*DAY ? today : dayStart(Math.min(today,sel+6*DAY)+HOUR*12);
   const days=[];for(let i=0;i<14;i++){days.push(dayStart(stripEnd-i*DAY+HOUR*12));}
   const shown=new Set();for(const ds of days)for(const g of segmentsOfDay(ds))shown.add(g.e.cat);
   const mc=dayMarksCol();
-  return `<div class="topbar"><h1>Registros</h1>${gearBtn}</div>
+  return `<div class="topbar"><h1>Registros</h1>${gearBtn}</div>${regModeHTML()}
     <section class="card">
       <div class="section-head"><h2>Elige un día</h2></div>
       <div class="dayrows" style="margin-top:10px">${days.map(ds=>{
         let t=0;for(const g of segmentsOfDay(ds))t+=g.ms;const d=new Date(ds);
-        return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''} ${isInvalid(ds)?'invalid':''}" data-day="${ds}" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}${data.dayNotes[dayKey(ds)]?' 📝':''}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
+        return `<button class="dayrow ${state.selDay===ds?'on':''} ${isRest(ds)?'rest':''} ${isInvalid(ds)?'invalid':''}" data-day="${ds}" ${dayRowStyle(mc,true)} title="${t?fmtHours(t)+' registradas':'Sin registros'}"><span class="d">${DOW[d.getDay()]}<small>${d.getDate()} ${MON[d.getMonth()]}${(data.dayNotes[dayKey(ds)]||[]).length?' 📝':''}</small></span><span>${dayBarHTML(ds,{small:true,ticks:false,static:true})}</span>${dayMarksHTML(ds,mc)}</button>`;}).join('')}</div>
       <div class="ticks" style="padding-left:66px;padding-right:${mc.w?mc.w+16:6}px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
       <div class="legend" style="margin-top:10px">${data.categories.filter(c=>shown.has(c.id)).map(c=>`<span><i class="dot" style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>
       ${marksLegendHTML(mc)}
@@ -1118,10 +1135,18 @@ function viewRegistros(){
     </section>
     <div class="section-head"><h2>Registros del ${fmtDayLong(state.selDay).toLowerCase()}</h2><button class="linkbtn" data-act="manual-day">+ Añadir a mano</button></div>
     ${entriesListHTML(state.selDay,!isRest(state.selDay))}
-    <section class="card" style="margin-top:14px"><div class="section-head"><h2>Nota del día</h2></div>
-      <textarea class="text daynote" id="dayNote" data-noteday="${state.selDay}" rows="${data.dayNotes[dayKey(state.selDay)]?3:2}" maxlength="2000" placeholder="Algo que quieras recordar de este día (opcional)">${esc(data.dayNotes[dayKey(state.selDay)]||'')}</textarea></section>`;
+    ${dayNotesHTML(state.selDay)}`;
 }
 
+/* Notas del día: una lista; se añade con «+ Añadir nota» y cada una se quita con su ×. */
+function dayNotesHTML(ds){
+  const ns=data.dayNotes[dayKey(ds)]||[];
+  return `<section class="card" style="margin-top:14px"><div class="section-head"><h2>Notas del día</h2>${state.noteAdding?'':`<button class="linkbtn" data-act="note-add">+ Añadir nota</button>`}</div>
+    ${ns.map(n=>`<div class="daynote-item"><span>${esc(n.text).replace(/\n/g,'<br>')}</span><button data-notedel="${n.id}" aria-label="Eliminar nota">×</button></div>`).join('')}
+    ${state.noteAdding?`<textarea class="text daynote" id="noteText" rows="3" maxlength="2000" placeholder="Algo que quieras recordar de este día"></textarea>
+      <div class="row" style="gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn sm ghost" data-act="note-cancel">Cancelar</button><button class="btn sm primary" data-act="note-save">Guardar</button></div>`
+      :(ns.length?'':'<p class="empty" style="margin:6px 0 0">Sin notas.</p>')}</section>`;
+}
 /* Estadísticas: solo días completos (hoy va a medias y falsearía medias y comparaciones). */
 function periodTotals(list){
   const m=new Map(); let s=0;
@@ -1731,7 +1756,7 @@ function renderSheet(){
         <input class="text" id="balB" value="${esc(c.b||'')}" placeholder="Por ejemplo: Lo dije" maxlength="24" autocomplete="off" style="margin-top:8px">
         <p class="desc" style="margin:6px 0 0;font-size:12px;color:var(--ink-3)">Los dos lados de la misma ocasión. Cada vez que se presente, se apunta uno de los dos.</p></div>`:''}
       ${isRate?`<div class="field"><div class="label">Qué mide (opcional)</div><textarea class="text" id="rateDesc" rows="3" maxlength="300" placeholder="Por ejemplo: 1 = disperso todo el rato · 3 = a ratos · 5 = absorto" style="width:100%;resize:vertical;font:inherit;font-size:14px">${esc(c.desc||'')}</textarea>
-        <p class="desc" style="margin:6px 0 0;font-size:12px;color:var(--ink-3)">Se ve debajo del nombre al puntuar, para responder siempre a lo mismo.</p></div>`:''}
+        <p class="desc" style="margin:6px 0 0;font-size:12px;color:var(--ink-3)">Al puntuar aparece un ⓘ junto al nombre: al tocarlo se muestra este texto.</p></div>`:''}
       ${isGroup?`<div class="field"><div class="label">Categorías</div><div class="catpick">${data.categories.filter(x=>!x.archived||c.cats.includes(x.id)).map(x=>{const other=x.group&&x.group!==c.id&&data.groups.some(g=>g.id===x.group)?groupById(x.group).name:'';
           return `<button data-gcat="${x.id}" class="${c.cats.includes(x.id)?'on':''}"><i class="dot" style="background:${x.color}"></i>${esc(x.name)}${other?`<span style="font-weight:500;color:var(--ink-3)"> · en ${esc(other)}</span>`:''}</button>`;}).join('')}</div>
         <p class="desc" style="margin:0;font-size:12px;color:var(--ink-3)">Una categoría solo puede estar en una supercategoría: si ya estaba en otra, se cambia a esta.</p></div>`:''}
@@ -1818,6 +1843,9 @@ document.addEventListener('click',ev=>{
   if(d.balundo){ if(undoBalance(d.balundo,+d.balday)){render();toast('Deshecho el último');} return;}
   if(d.kedit){openKindEdit(d.kind,d.kedit);return;}
   if(d.rate&&d.rateday){ setRating(d.rate,+d.rateday,+d.rateval); render(); return; }
+  if(d.notedel){ const k=dayKey(state.selDay), ns=data.dayNotes[k]||[]; if(!confirm('¿Eliminar esta nota?')) return; data.dayNotes[k]=ns.filter(n=>n.id!==d.notedel); if(!data.dayNotes[k].length) delete data.dayNotes[k]; save(); render(); return; }
+  if(d.rateinfo){ const r=ratingById(d.rateinfo); if(r&&r.desc){ toast(r.name+': '+r.desc); clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('#toast').hidden=true,6000);} return; }
+  if(d.day&&state.regAll&&!d.goto){ state.regAll=false; state.noteAdding=false; window.scrollTo(0,0); }
   if(d.ratename){ if(lp.fired){lp.fired=false;} return; }
   if(d.tgroup){state.taskClosed=state.taskClosed.includes(d.tgroup)?state.taskClosed.filter(x=>x!==d.tgroup):state.taskClosed.concat(d.tgroup);render();return;}
   if(d.tdone){const t=data.tasks.find(x=>x.id===d.tdone);if(t){t.done=!t.done;t.doneAt=t.done?Date.now():0;save();render();}return;}
@@ -1917,6 +1945,12 @@ document.addEventListener('click',ev=>{
     case 'tasks-clear': if(confirm('¿Borrar las tareas hechas?')){data.tasks=data.tasks.filter(t=>!t.done);save();render();} break;
     case 'join-prev': {const r=running();const p=prevEntry(r);if(p){r.start=endOf(p);save();render();}break;}
     case 'manual': newManualEntry(dayStart(Date.now())); break;
+    case 'note-add': state.noteAdding=true; render(); setTimeout(()=>{const t=$('#noteText'); if(t) t.focus();},30); break;
+    case 'note-cancel': state.noteAdding=false; render(); break;
+    case 'note-save': { const v=(($('#noteText')||{}).value||'').trim(); state.noteAdding=false;
+      if(v){ const k=dayKey(state.selDay); (data.dayNotes[k]=data.dayNotes[k]||[]).push({id:uid(),text:v,t:Date.now()}); save(); toast('Nota añadida'); } render(); break; }
+    case 'reg-mode': state.regAll=!state.regAll; state.regAllN=14; render(); window.scrollTo(0,0); break;
+    case 'reg-more': state.regAllN=(state.regAllN||14)+14; render(); break;
     case 'manual-day': newManualEntry(state.selDay); break;
     case 'new-cat': state.catEdit={id:null,name:'',color:PALETTE.find(h=>!data.categories.some(c=>c.color===h))||PALETTE[0],icon:'',group:null};state.sheet='cat';renderSheet(); break;
     case 'backup': doBackup(); break;
@@ -2007,7 +2041,6 @@ document.addEventListener('change',ev=>{
     return;
   }
   if(t.id==='dayPick'){ if(!t.value) return; const [y,mo,da]=t.value.split('-').map(Number); state.selDay=Math.min(dayStart(Date.now()),new Date(y,mo-1,da).getTime()); render(); return; }
-  if(t.id==='dayNote'){ const k=dayKey(+t.dataset.noteday), v=t.value.trim(); if(v) data.dayNotes[k]=v; else delete data.dayNotes[k]; save(); toast(v?'Nota guardada':'Nota borrada'); render(); return; }
   if(t.id==='periodSel'){ state[t.dataset.period]=+t.value; render(); return; }
   if(t.id==='catColor'&&state.catEdit){
     state.catEdit.color=t.value; document.querySelectorAll('.swatches button').forEach(b=>b.classList.remove('on'));
