@@ -589,6 +589,7 @@ function recorded(x,start,end){ x.os=start; if(end!=null) x.oe=end; else delete 
 let undoSnap=null;
 function snapEntries(){ undoSnap=JSON.stringify(data.entries); }
 function undoEntries(){ if(!undoSnap) return; data.entries=JSON.parse(undoSnap); undoSnap=null; state.pendEnd=null; sortEntries(); save(); render(); toast('Deshecho'); }
+function toastUndoInvalid(low){ const t=$('#toast'); t.textContent=low.length+(low.length===1?' día marcado':' días marcados')+' como no válido '; const b=document.createElement('button'); b.textContent='Deshacer'; b.className='toast-undo'; b.onclick=()=>{const ks=low.map(dayKey); data.invalidDays=data.invalidDays.filter(k=>!ks.includes(k)); save(); render(); toast('Deshecho');}; t.appendChild(b); t.className='toast'; t.hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.hidden=true,7000); }
 function toastUndo(msg){ const t=$('#toast'); t.textContent=msg+' '; const b=document.createElement('button'); b.textContent='Deshacer'; b.className='toast-undo'; b.onclick=undoEntries; t.appendChild(b); t.className='toast'; t.hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.hidden=true,7000); }
 function resolveOverlaps(e){
   const en=endOf(e); let msg=[];
@@ -777,6 +778,17 @@ function isInvalid(ds){return data.invalidDays.includes(dayKey(ds));}
 function toggleInvalid(ds){const k=dayKey(ds);if(isInvalid(ds))data.invalidDays=data.invalidDays.filter(x=>x!==k);else data.invalidDays.push(k);save();}
 function invalidBtn(ds){return `<button class="restbtn ${isInvalid(ds)?'on':''}" data-invalid="${ds}" aria-pressed="${isInvalid(ds)}" title="Día incompleto: no cuenta en Datos">⚠️ No válido</button>`;}
 /* Día excluido de Datos según los interruptores «Con 🌴» y «Con ⚠️». */
+/* Horas registradas de un día (solo lo que cae dentro de él). */
+function coveredOfDay(ds){ const de=dayEnd(ds); return entriesOfDay(ds).reduce((a,e)=>a+Math.max(0,Math.min(endOf(e),de)-Math.max(e.start,ds)),0); }
+const LOW_DAY=18*HOUR; // por debajo, el día probablemente está incompleto
+/* Días del periodo con poco registrado que aún no se han marcado como no válidos. */
+function lowDays(list){ return list.filter(ds=>!isInvalid(ds)&&coveredOfDay(ds)<LOW_DAY); }
+function lowDaysHTML(list){
+  const low=lowDays(list), valid=list.filter(ds=>!isInvalid(ds)).length;
+  if(!low.length) return `<p class="sub" style="font-size:12px;color:var(--ink-3);margin:4px 2px 0">${valid} de ${list.length} días válidos en el periodo.</p>`;
+  return `<section class="card" style="padding:12px 14px"><p style="margin:0;font-size:13px;color:var(--ink-2)"><strong>${low.length} ${low.length===1?'día tiene':'días tienen'} menos de 18 h registradas</strong>: ${low.map(ds=>{const d=new Date(ds);return d.getDate()+' '+MON[d.getMonth()]+' ('+(coveredOfDay(ds)/HOUR).toFixed(1).replace('.',',')+' h)';}).join(', ')}. Probablemente estén incompletos y bajen las medias.</p>
+    <button class="restbtn" style="margin-top:8px" data-act="mark-low-invalid">⚠️ Marcar como no válidos</button></section>`;
+}
 function skipDay(ds){ return (state.dayFilter!=='all'&&isRest(ds))||(!state.withInvalid&&isInvalid(ds)); }
 function restBtn(ds){return `<button class="restbtn ${isRest(ds)?'on':''}" data-rest="${ds}" aria-pressed="${isRest(ds)}" title="Marcar como día de descanso">🌴 Descanso</button>`;}
 /* Huecos entre registros de un día (y, si es hoy y no hay nada en marcha, desde el último hasta ahora).
@@ -1465,6 +1477,7 @@ function viewStats(){
       </div>
 
     </div>
+    ${prog?'':lowDaysHTML(allDays)}
     ${a==='resumen'?statsResumen(statDays,n):a==='diatipo'?statsDiaTipo(statDays):a==='semana'?statsSemana(statDays):a==='tipos'?statsTipos(statDays):a==='huecos'?statsHuecos(statDays):statsProgresion()}`;
 }
 
@@ -1806,6 +1819,8 @@ document.addEventListener('click',ev=>{
       data.balances=data.balances.filter(b=>b.id!==id);
       data.balanceLog=data.balanceLog.filter(x=>x.bid!==id);
       save(); closeSheet(); render(); break; }
+    case 'mark-low-invalid': { const today=dayStart(Date.now()), list=[]; for(let i=1;i<=state.range;i++) list.push(dayStart(today-i*DAY+HOUR*12));
+      const low=lowDays(list); for(const ds of low) data.invalidDays.push(dayKey(ds)); save(); render(); toastUndoInvalid(low); break; }
     case 'toggle-invalid': state.withInvalid=!state.withInvalid; saveViewPrefs(); render(); break;
     case 'toggle-rest': state.dayFilter=state.dayFilter==='all'?'work':'all'; render(); break;
 

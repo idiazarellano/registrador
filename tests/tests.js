@@ -357,3 +357,11 @@ state.withInvalid=true; chk('Con ⚠️ lo incluye', filterDays([d1,d2]).length=
 state.withInvalid=false; toggleInvalid(d1); chk('desmarcar', !isInvalid(d1));
 try{ state.view='stats'; viewStats(); chk('viewStats con ⚠️', viewStats().includes('toggle-invalid')); }catch(e){print('FAIL viewStats '+e.message)}
 })();
+;(function(){
+const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
+const ds=dayStart(Date.now())-3*86400000+3600000*12; data.invalidDays=[];
+data.entries=data.entries.filter(e=>!(e.start<dayEnd(ds)&&endOf(e)>ds)); data.entries.push({id:'lw',cat:'c1',start:ds+8*3600000,end:ds+10*3600000});
+chk('día con 2 h es bajo', lowDays([ds]).length===1 && Math.round(coveredOfDay(ds)/3600000)===2);
+chk('aviso en Datos', lowDaysHTML([ds]).includes('mark-low-invalid'));
+data.invalidDays.push(dayKey(ds)); chk('marcado ya no avisa', lowDays([ds]).length===0); data.invalidDays=[];
+})();
