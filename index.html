@@ -935,26 +935,52 @@ function ratingsHTML(ds){
     return `<div class="rating" style="--rc:${r.color}"><button class="ratename" data-ratename="${r.id}">${r.icon?r.icon+' ':''}${esc(r.name)}</button>
       <div class="ratedots">${[1,2,3,4,5].map(n=>`<button class="num ${v&&n<=v?'on':''} ${v===n?'sel':''}" data-rate="${r.id}" data-rateval="${n}" data-rateday="${ds}" aria-label="${n}" aria-pressed="${v===n}">${n}</button>`).join('')}</div></div>`;}).join('')}</div>`;
 }
-/* Compara el tiempo por categoría entre días buenos (4–5) y malos (1–2) de una valoración.
-   Devuelve las diferencias de media por día más grandes, o null si hay pocos días de cada. */
-function ratingContrast(id,days,min=2){
-  const hi=days.filter(ds=>ratingOf(id,ds)>=4), lo=days.filter(ds=>{const v=ratingOf(id,ds);return v&&v<=2;});
-  if(hi.length<min||lo.length<min) return null;
-  const avg=list=>{const m=new Map();for(const ds of list)for(const g of segmentsOfDay(ds))m.set(U(g.e.cat),(m.get(U(g.e.cat))||0)+g.ms/list.length);return m;};
-  const A=avg(hi), B=avg(lo), ids=new Set([...A.keys(),...B.keys()]);
-  const diffs=[...ids].map(c=>({c,d:(A.get(c)||0)-(B.get(c)||0)})).filter(x=>Math.abs(x.d)>=15*MIN).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d)).slice(0,3);
-  return {hi:hi.length,lo:lo.length,diffs};
+/* Relaciones entre cada valoración y el tiempo de cada categoría (o supercategoría, según el nivel).
+   Se prueban todas las parejas: correlación de rangos (Spearman) entre la nota y los minutos del día,
+   y una prueba de permutación (se barajan las notas 1000 veces) para ver cuántas veces el azar
+   iguala esa relación. Como se prueban muchas parejas a la vez, el resultado se corrige con
+   Benjamini-Hochberg (q) y solo se muestra lo que queda por debajo de la exigencia elegida. */
+const REL_MIN_DAYS=10, REL_PERMS=1000;
+function rankArr(a){const s=a.map((v,i)=>[v,i]).sort((x,y)=>x[0]-y[0]),r=Array(a.length);for(let i=0;i<s.length;){let j=i;while(j+1<s.length&&s[j+1][0]===s[i][0])j++;for(let k=i;k<=j;k++)r[s[k][1]]=(i+j)/2;i=j+1;}return r;}
+function corrArr(x,y){const n=x.length;let mx=0,my=0;for(let i=0;i<n;i++){mx+=x[i];my+=y[i];}mx/=n;my/=n;let a=0,b=0,c=0;for(let i=0;i<n;i++){const dx=x[i]-mx,dy=y[i]-my;a+=dx*dy;b+=dx*dx;c+=dy*dy;}return b&&c?a/Math.sqrt(b*c):0;}
+let relCache={k:null,v:null};
+function ratingRelations(days){
+  const key=data.meta.updated+'|'+state.level+'|'+days.join(',');
+  if(relCache.k===key) return relCache.v;
+  const tests=[], counts={};
+  for(const r of activeRatings()){
+    const ks=days.filter(ds=>ratingOf(r.id,ds)); counts[r.id]=ks.length; if(ks.length<REL_MIN_DAYS) continue;
+    const per=ks.map(ds=>{const m=new Map();for(const g of segmentsOfDay(ds))m.set(U(g.e.cat),(m.get(U(g.e.cat))||0)+g.ms);return m;});
+    const notes=ks.map(ds=>ratingOf(r.id,ds)), y=rankArr(notes), avgNote=notes.reduce((a,b)=>a+b,0)/notes.length;
+    const ids=new Set(per.flatMap(m=>[...m.keys()]));
+    for(const c of ids){
+      const xv=per.map(m=>m.get(c)||0); if(xv.filter(v=>v>0).length<4) continue;
+      const x=rankArr(xv), rho=corrArr(x,y); if(!rho) continue;
+      let seed=12345, hit=0; const rnd=()=>(seed=seed*16807%2147483647)/2147483647, yy=y.slice();
+      for(let t=0;t<REL_PERMS;t++){ for(let i=yy.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1)),tmp=yy[i];yy[i]=yy[j];yy[j]=tmp;} if(Math.abs(corrArr(x,yy))>=Math.abs(rho)-1e-12) hit++; }
+      const hi=xv.filter((_,i)=>notes[i]>=avgNote), lo=xv.filter((_,i)=>notes[i]<avgNote), m=l=>l.length?l.reduce((a,b)=>a+b,0)/l.length:0;
+      tests.push({r:r.id,c,rho,p:(hit+1)/(REL_PERMS+1),d:m(hi)-m(lo)});
+    }
+  }
+  tests.sort((a,b)=>a.p-b.p); const n=tests.length;
+  tests.forEach((t,i)=>t.q=Math.min(1,t.p*n/(i+1))); for(let i=n-2;i>=0;i--) tests[i].q=Math.min(tests[i].q,tests[i+1].q);
+  relCache={k:key,v:{tests,counts,n}}; return relCache.v;
 }
+const ALPHAS=[0.01,0.05,0.1,0.2];
+function alpha(){ return ALPHAS.includes(data.settings.alpha)?data.settings.alpha:0.05; }
 function statsRatingsHTML(days,prevDays){
   const rs=activeRatings(); if(!rs.length) return '';
   const mean=(id,list)=>{const v=list.map(ds=>ratingOf(id,ds)).filter(Boolean);return v.length?{m:v.reduce((a,b)=>a+b,0)/v.length,n:v.length}:null;};
+  const rel=ratingRelations(days);
   const rows=rs.map(r=>{
     const cur=mean(r.id,days), prev=mean(r.id,prevDays);
     if(!cur) return `<div class="balance"><div class="balhead"><span>${r.icon?r.icon+' ':''}${esc(r.name)}</span><small>sin notas en el periodo</small></div></div>`;
     const dist=[1,2,3,4,5].map(n=>days.filter(ds=>ratingOf(r.id,ds)===n).length);
-    const k=ratingContrast(r.id,days);
-    const cx=k?(k.diffs.length?`Días con 4–5 (${k.hi}) frente a días con 1–2 (${k.lo}): ${k.diffs.map(x=>`${esc(unitById(x.c).name)} <b class="num">${x.d>0?'+':'−'}${fmtDur(Math.abs(x.d))}</b>`).join(' · ')} de media.`:`Días con 4–5 y con 1–2 reparten el tiempo de forma parecida.`)
-      :'Con al menos 2 días de 4–5 y 2 de 1–2 se compara en qué se fue el tiempo.';
+    const nr=rel.counts[r.id]||0, sig=rel.tests.filter(t=>t.r===r.id&&t.q<alpha());
+    const pct=v=>String(Math.round(v*100))+' %';
+    const cx=nr<REL_MIN_DAYS?`Relaciones: hacen falta ${REL_MIN_DAYS} días puntuados en el periodo (hay ${nr}).`
+      :sig.length?'Con mejor nota: '+sig.map(t=>`${t.rho>0?'más':'menos'} ${esc(unitById(t.c).name)} <b class="num">${t.d>0?'+':'−'}${fmtDur(Math.abs(t.d))}</b> <span title="Correlación de rangos; probabilidad corregida de ser casualidad: ${pct(t.q)}">(ρ ${t.rho.toFixed(2).replace('.',',').replace('-','−')})</span>`).join(' · ')+'.'
+      :`Ninguna relación clara con exigencia del ${pct(alpha())}.`;
     return `<div class="balance">
       <div class="balhead"><span>${r.icon?r.icon+' ':''}${esc(r.name)}</span><small><b class="num" style="color:var(--ink);font-size:15px">${cur.m.toFixed(1).replace('.',',')}</b> de media · ${cur.n}/${days.length} días${prev?` · antes ${prev.m.toFixed(1).replace('.',',')}`:''}</small></div>
       <div class="balbar">${dist.map((c,i)=>c?`<i style="width:${c/cur.n*100}%;background:${r.color};opacity:${.25+i*.1875}" title="${i+1}: ${c}"></i>`:'').join('')}</div>
@@ -962,7 +988,9 @@ function statsRatingsHTML(days,prevDays){
     </div>`;
   }).join('');
   return `<section class="card"><div class="section-head"><h2>Valoraciones</h2><span class="label">${days.length} días</span></div>
-    <div class="balances" style="margin-top:4px">${rows}</div></section>`;
+    <div class="balances" style="margin-top:4px">${rows}</div>
+    ${rel.n?`<div class="row" style="gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap"><span class="label">Exigencia</span><div class="seg-control">${ALPHAS.map(a=>`<button data-alpha="${a}" aria-pressed="${alpha()===a}">${Math.round(a*100)} %</button>`).join('')}</div></div>
+    <p class="sub" style="font-size:12px;color:var(--ink-3);margin-top:8px">Se han probado ${rel.n} parejas de valoración y ${byGroup()?'supercategoría':'categoría'}. Solo se muestran las que tienen menos de un ${Math.round(alpha()*100)} % de probabilidad de ser casualidad, contando con que se prueban muchas a la vez. Que dos cosas vayan juntas no dice cuál causa cuál. Con más días (90) salen relaciones más fiables.</p>`:''}</section>`;
 }
 
 /* ============ Tareas ============
@@ -1792,6 +1820,7 @@ document.addEventListener('click',ev=>{
   if(d.gran){data.settings.granularity=+d.gran;save();render();return;}
   if(d.bmode){data.settings.backupMode=d.bmode;save();render();return;}
   if(d.insert){openInsertEditor(+d.insert);return;}
+  if(d.alpha){data.settings.alpha=+d.alpha;save();render();return;}
   if(d.invalid){toggleInvalid(+d.invalid);render();toast(isInvalid(+d.invalid)?'Día marcado como no válido: no cuenta en Datos':'El día vuelve a contar');return;}
   if(d.rest){toggleRest(+d.rest);render();toast(isRest(+d.rest)?'Marcado como día de descanso':'Ya no es día de descanso');return;}
   // sheet: editor

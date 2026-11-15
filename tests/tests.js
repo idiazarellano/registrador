@@ -171,7 +171,7 @@ data.ratings=[{id:'r1',name:'Sueño',color:'#333',icon:'',archived:false}]; data
 setRating('r1',t0,4); chk('nota puesta', ratingOf('r1',t0)===4);
 setRating('r1',t0,2); chk('nota cambiada', ratingOf('r1',t0)===2);
 setRating('r1',t0,2); chk('nota quitada al repetir', ratingOf('r1',t0)===null&&!Object.keys(data.ratingDays).length);
-chk('contraste sin días suficientes', ratingContrast('r1',[t0])===null);
+chk('relaciones sin días suficientes', ratingRelations([t0]).tests.length===0);
 try{const v=viewHoy(); chk('viewHoy con valoraciones', v.includes('data-rate="r1"'));}catch(e){chk('viewHoy valoraciones '+e.message,false)}
 try{setRating('r1',t0,5); const v=viewStats(); chk('viewStats con valoraciones', v.includes('Valoraciones'));}catch(e){chk('viewStats valoraciones '+e.message,false)}
 data.ratings=[];data.ratingDays={};

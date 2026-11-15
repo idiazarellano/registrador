@@ -22,7 +22,7 @@ En Datos → Resumen aparecen el reparto del periodo y el total de ocasiones, co
 
 ## Valoraciones (nota del día del 1 al 5)
 
-Un criterio que se puntúa una vez al día: «calidad del sueño», «rendimiento en el trabajo». Se crean en Hoy o en Ajustes → Valoraciones, se puntúan tocando un número (en Hoy para hoy, en Registros para el día elegido; tocar la nota puesta la quita) y se editan con una pulsación larga sobre el nombre. Un día sin nota no cuenta en las medias. En Datos aparecen la media del periodo, la anterior, el reparto de notas y, con al menos dos días de 4–5 y dos de 1–2, las categorías cuya media diaria más cambia entre unos y otros.
+Un criterio que se puntúa una vez al día: «calidad del sueño», «rendimiento en el trabajo». Se crean en Hoy o en Ajustes → Valoraciones, se puntúan tocando un número (en Hoy para hoy, en Registros para el día elegido; tocar la nota puesta la quita) y se editan con una pulsación larga sobre el nombre. Un día sin nota no cuenta en las medias. En Datos aparecen la media del periodo, la anterior, el reparto de notas y, con al menos 10 días puntuados, las categorías cuyo tiempo va de la mano de la nota. Se prueban todas las parejas (correlación de rangos y prueba de permutación, corregida por el número de pruebas) y solo se muestran las que superan la exigencia elegida (1, 5, 10 o 20 %).
 
 ## Supercategorías
 
