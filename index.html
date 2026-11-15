@@ -289,10 +289,12 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .datepick input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
 .daynote{width:100%;margin-top:8px;resize:vertical;font:inherit;font-size:14px;line-height:1.4}
 .rateinfo{flex:0 0 auto;width:26px;height:26px;border-radius:50%;color:var(--ink-3);font-size:15px;margin-left:-6px}
+.rateinfo.on{background:var(--surface-2);color:var(--ink)}
+.rateinfo-box{margin:0 0 8px;padding:10px 12px;border-radius:10px;background:var(--surface-2);color:var(--ink-2);font-size:13px;line-height:1.4}
+.calbtn{font-size:13px}
 .daynote-item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.4}
 .daynote-item span{flex:1;min-width:0;overflow-wrap:anywhere}
 .daynote-item button{flex:0 0 auto;width:28px;height:28px;border-radius:50%;color:var(--ink-3);font-size:18px;line-height:1}
-.regmode{display:flex;gap:4px;margin:0 0 12px}
 .restbtn{font-size:12px;font-weight:700;color:var(--ink-3);padding:4px 8px;border-radius:8px;border:1px solid var(--surface-2);white-space:nowrap}
 .restbtn.on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .dayrow .d{font-size:12px;font-weight:700;color:var(--ink-2);line-height:1.15}
@@ -945,8 +947,8 @@ function setRating(id,ds,v){ // tocar la nota que ya tiene la quita
 function ratingsHTML(ds){
   const rs=activeRatings(); if(!rs.length) return '';
   return `<div class="ratings">${rs.map(r=>{const v=ratingOf(r.id,ds);
-    return `<div class="rating" style="--rc:${r.color}"><button class="ratename" data-ratename="${r.id}">${r.icon?r.icon+' ':''}${esc(r.name)}</button>${r.desc?`<button class="rateinfo" data-rateinfo="${r.id}" aria-label="Qué mide ${esc(r.name)}" title="${esc(r.desc)}">ⓘ</button>`:''}
-      <div class="ratedots">${[1,2,3,4,5].map(n=>`<button class="num ${v&&n<=v?'on':''} ${v===n?'sel':''}" data-rate="${r.id}" data-rateval="${n}" data-rateday="${ds}" aria-label="${n}" aria-pressed="${v===n}">${n}</button>`).join('')}</div></div>`;}).join('')}</div>`;
+    return `<div class="rating" style="--rc:${r.color}"><button class="ratename" data-ratename="${r.id}">${r.icon?r.icon+' ':''}${esc(r.name)}</button>${r.desc?`<button class="rateinfo ${state.rateInfo===r.id?'on':''}" data-rateinfo="${r.id}" aria-label="Qué mide ${esc(r.name)}" aria-expanded="${state.rateInfo===r.id}">ⓘ</button>`:''}
+      <div class="ratedots">${[1,2,3,4,5].map(n=>`<button class="num ${v&&n<=v?'on':''} ${v===n?'sel':''}" data-rate="${r.id}" data-rateval="${n}" data-rateday="${ds}" aria-label="${n}" aria-pressed="${v===n}">${n}</button>`).join('')}</div></div>${state.rateInfo===r.id&&r.desc?`<div class="rateinfo-box">${esc(r.desc).replace(/\n/g,'<br>')}</div>`:''}`;}).join('')}</div>`;
 }
 /* Relaciones entre cada valoración y el tiempo de cada categoría (o supercategoría, según el nivel).
    Se prueban todas las parejas: correlación de rangos (Spearman) entre la nota y los minutos del día,
@@ -1097,26 +1099,14 @@ function viewHoy(){
 }
 
 /* Registros: navegar por los días y editarlos. Las estadísticas viven aparte. */
-/* «Todos»: todos los registros, del más reciente al más antiguo, agrupados por día (de 14 en 14 días). */
-function regModeHTML(){ return `<div class="seg-control regmode">${[[false,'Por día'],[true,'Todos']].map(([k,l])=>`<button ${!!state.regAll===k?'':'data-act="reg-mode"'} aria-pressed="${!!state.regAll===k}">${l}</button>`).join('')}</div>`; }
-function viewRegistrosAll(){
-  const ks=[...new Set(data.entries.filter(e=>endOf(e)>e.start).map(e=>dayKey(e.start)))].sort().reverse();
-  const N=state.regAllN||14, shown=ks.slice(0,N);
-  return `<div class="topbar"><h1>Registros</h1>${gearBtn}</div>${regModeHTML()}
-    ${shown.length?shown.map(k=>{const [y,m,d]=k.split('-').map(Number), ds=new Date(y,m-1,d).getTime(); let t=0; for(const g of segmentsOfDay(ds)) t+=g.ms;
-      return `<div class="section-head" style="margin-top:14px"><h2><button class="linkbtn" data-day="${ds+HOUR*12}" style="font:inherit;color:inherit;padding:0">${fmtDayLong(ds)}</button></h2><span class="sub num" style="font-size:12px;color:var(--ink-3)">${fmtDur(t)}${isRest(ds)?' · 🌴':''}${isInvalid(ds)?' · ⚠️':''}</span></div>${entriesListHTML(ds,false)}`;}).join('')
-      :'<p class="empty">Todavía no hay registros.</p>'}
-    ${ks.length>N?`<button class="btn sm ghost" data-act="reg-more" style="margin:16px auto;display:block">Ver ${Math.min(14,ks.length-N)} días más (quedan ${ks.length-N})</button>`:''}`;
-}
 function viewRegistros(){
-  if(state.regAll) return viewRegistrosAll();
   const today=dayStart(Date.now()), sel=state.selDay;
   // La tira muestra 14 días; si el día elegido queda fuera, se desplaza para incluirlo.
   const stripEnd = sel>today-13*DAY ? today : dayStart(Math.min(today,sel+6*DAY)+HOUR*12);
   const days=[];for(let i=0;i<14;i++){days.push(dayStart(stripEnd-i*DAY+HOUR*12));}
   const shown=new Set();for(const ds of days)for(const g of segmentsOfDay(ds))shown.add(g.e.cat);
   const mc=dayMarksCol();
-  return `<div class="topbar"><h1>Registros</h1>${gearBtn}</div>${regModeHTML()}
+  return `<div class="topbar"><h1>Registros</h1>${gearBtn}</div>
     <section class="card">
       <div class="section-head"><h2>Elige un día</h2></div>
       <div class="dayrows" style="margin-top:10px">${days.map(ds=>{
@@ -1127,7 +1117,7 @@ function viewRegistros(){
       ${marksLegendHTML(mc)}
     </section>
     <section class="card">
-      <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><span class="row" style="gap:8px;align-items:center;justify-content:center;flex:1"><label class="datepick" title="Elegir cualquier fecha"><h2 style="font-size:14px;font-weight:800">${fmtDayLong(state.selDay)} <span aria-hidden="true" style="font-size:11px;color:var(--ink-3)">▾</span></h2><input type="date" id="dayPick" value="${dayKey(state.selDay)}" max="${dayKey(today)}" aria-label="Elegir fecha" onclick="try{this.showPicker()}catch(_){}"></label>${restBtn(state.selDay)}${invalidBtn(state.selDay)}</span><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
+      <div class="dayhead"><button data-day="${state.selDay-DAY+HOUR*12}" aria-label="Día anterior">‹</button><span class="row" style="gap:8px;align-items:center;justify-content:center;flex:1"><label class="datepick" title="Elegir cualquier fecha"><h2 style="font-size:14px;font-weight:800"><span class="calbtn" aria-hidden="true">📅</span> ${fmtDayLong(state.selDay)}</h2><input type="date" id="dayPick" value="${dayKey(state.selDay)}" max="${dayKey(today)}" aria-label="Elegir fecha" onclick="try{this.showPicker()}catch(_){}"></label>${restBtn(state.selDay)}${invalidBtn(state.selDay)}</span><button data-day="${Math.min(today,dayStart(state.selDay+DAY+HOUR*12))}" aria-label="Día siguiente" ${state.selDay>=today?'disabled style="opacity:.3"':''}>›</button></div>
       <div style="margin:10px 0 12px">${dayBarHTML(state.selDay)}${dayTotalsHTML(state.selDay)}</div>
       ${activeMarks().length?`<div class="section-head" style="margin-bottom:8px"><h2>Marcas</h2></div>${marksRowHTML(state.selDay)}`:''}
       ${activeBalances().length?`<div class="section-head" style="margin:12px 0 4px"><h2>Balanzas</h2></div>${balancesHTML(state.selDay)}`:''}
@@ -1756,7 +1746,7 @@ function renderSheet(){
         <input class="text" id="balB" value="${esc(c.b||'')}" placeholder="Por ejemplo: Lo dije" maxlength="24" autocomplete="off" style="margin-top:8px">
         <p class="desc" style="margin:6px 0 0;font-size:12px;color:var(--ink-3)">Los dos lados de la misma ocasión. Cada vez que se presente, se apunta uno de los dos.</p></div>`:''}
       ${isRate?`<div class="field"><div class="label">Qué mide (opcional)</div><textarea class="text" id="rateDesc" rows="3" maxlength="300" placeholder="Por ejemplo: 1 = disperso todo el rato · 3 = a ratos · 5 = absorto" style="width:100%;resize:vertical;font:inherit;font-size:14px">${esc(c.desc||'')}</textarea>
-        <p class="desc" style="margin:6px 0 0;font-size:12px;color:var(--ink-3)">Al puntuar aparece un ⓘ junto al nombre: al tocarlo se muestra este texto.</p></div>`:''}
+        <p class="desc" style="margin:6px 0 0;font-size:12px;color:var(--ink-3)">Al puntuar aparece un ⓘ junto al nombre: al tocarlo se abre este texto y al tocar en cualquier otro sitio se cierra.</p></div>`:''}
       ${isGroup?`<div class="field"><div class="label">Categorías</div><div class="catpick">${data.categories.filter(x=>!x.archived||c.cats.includes(x.id)).map(x=>{const other=x.group&&x.group!==c.id&&data.groups.some(g=>g.id===x.group)?groupById(x.group).name:'';
           return `<button data-gcat="${x.id}" class="${c.cats.includes(x.id)?'on':''}"><i class="dot" style="background:${x.color}"></i>${esc(x.name)}${other?`<span style="font-weight:500;color:var(--ink-3)"> · en ${esc(other)}</span>`:''}</button>`;}).join('')}</div>
         <p class="desc" style="margin:0;font-size:12px;color:var(--ink-3)">Una categoría solo puede estar en una supercategoría: si ya estaba en otra, se cambia a esta.</p></div>`:''}
@@ -1833,6 +1823,8 @@ function closeSheet(){
 
 /* ============ Eventos ============ */
 document.addEventListener('click',ev=>{
+  // El recuadro de «qué mide» se cierra al tocar en cualquier otro sitio (el ⓘ lo abre y lo cierra él mismo).
+  if(state.rateInfo&&!ev.target.closest('[data-rateinfo]')){ state.rateInfo=null; render(); if(!ev.target.closest('button,[data-close]')) return; }
   const t=ev.target.closest('button,[data-close]'); if(!t) return;
   const d=t.dataset;
   if(t.hasAttribute('data-close')&&t===ev.target||t.matches('button[data-close]')){closeSheet();return;}
@@ -1844,8 +1836,7 @@ document.addEventListener('click',ev=>{
   if(d.kedit){openKindEdit(d.kind,d.kedit);return;}
   if(d.rate&&d.rateday){ setRating(d.rate,+d.rateday,+d.rateval); render(); return; }
   if(d.notedel){ const k=dayKey(state.selDay), ns=data.dayNotes[k]||[]; if(!confirm('¿Eliminar esta nota?')) return; data.dayNotes[k]=ns.filter(n=>n.id!==d.notedel); if(!data.dayNotes[k].length) delete data.dayNotes[k]; save(); render(); return; }
-  if(d.rateinfo){ const r=ratingById(d.rateinfo); if(r&&r.desc){ toast(r.name+': '+r.desc); clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('#toast').hidden=true,6000);} return; }
-  if(d.day&&state.regAll&&!d.goto){ state.regAll=false; state.noteAdding=false; window.scrollTo(0,0); }
+  if(d.rateinfo){ state.rateInfo=state.rateInfo===d.rateinfo?null:d.rateinfo; render(); return; }
   if(d.ratename){ if(lp.fired){lp.fired=false;} return; }
   if(d.tgroup){state.taskClosed=state.taskClosed.includes(d.tgroup)?state.taskClosed.filter(x=>x!==d.tgroup):state.taskClosed.concat(d.tgroup);render();return;}
   if(d.tdone){const t=data.tasks.find(x=>x.id===d.tdone);if(t){t.done=!t.done;t.doneAt=t.done?Date.now():0;save();render();}return;}
@@ -1949,8 +1940,6 @@ document.addEventListener('click',ev=>{
     case 'note-cancel': state.noteAdding=false; render(); break;
     case 'note-save': { const v=(($('#noteText')||{}).value||'').trim(); state.noteAdding=false;
       if(v){ const k=dayKey(state.selDay); (data.dayNotes[k]=data.dayNotes[k]||[]).push({id:uid(),text:v,t:Date.now()}); save(); toast('Nota añadida'); } render(); break; }
-    case 'reg-mode': state.regAll=!state.regAll; state.regAllN=14; render(); window.scrollTo(0,0); break;
-    case 'reg-more': state.regAllN=(state.regAllN||14)+14; render(); break;
     case 'manual-day': newManualEntry(state.selDay); break;
     case 'new-cat': state.catEdit={id:null,name:'',color:PALETTE.find(h=>!data.categories.some(c=>c.color===h))||PALETTE[0],icon:'',group:null};state.sheet='cat';renderSheet(); break;
     case 'backup': doBackup(); break;

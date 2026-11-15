@@ -382,6 +382,6 @@ chk('botones solo icono', restBtn(ds).includes('>🌴</button>') && invalidBtn(d
 data.ratings=[{id:'rz',name:'Foco',color:'#000',icon:'',archived:false,desc:'1 disperso · 5 absorto'}];
 chk('descripción solo tras ⓘ', ratingsHTML(ds).includes('data-rateinfo="rz"') && !ratingsHTML(ds).includes('>1 disperso'));
 chk('notas antiguas en texto pasan a lista', Array.isArray(migrate({dayNotes:{'2026-01-01':'hola'}}).dayNotes['2026-01-01']));
-state.regAll=true; let ha=''; try{ ha=viewRegistros(); }catch(e){ print('FAIL Todos '+e.message); } chk('Registros: modo Todos', ha.includes('data-edit=') && ha.includes('Por día')); state.regAll=false;
+state.rateInfo='rz'; chk('recuadro de qué mide abierto', ratingsHTML(ds).includes('rateinfo-box')); state.rateInfo=null; chk('cerrado por defecto', !ratingsHTML(ds).includes('rateinfo-box'));
 chk('migrate añade dayNotes', typeof migrate({}).dayNotes==='object');
 })();
