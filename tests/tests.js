@@ -372,3 +372,14 @@ data.entries=data.entries.filter(e=>e.cat!=='c8'); data.entries.push({id:'n1',ca
 chk('noche: 23:00–7:00, sin la siesta', nightOf(ds,'c8')===8*H);
 chk('reconoce la categoría del sueño', sleepCat()==='c8');
 })();
+;(function(){
+const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
+const ds=dayStart(Date.now())-40*86400000+3600000*12;
+data.dayNotes={}; data.dayNotes[dayKey(ds)]='nota de prueba';
+state.selDay=dayStart(ds); let h=''; try{ h=viewRegistros(); }catch(e){ print('FAIL viewRegistros '+e.message); }
+chk('Registros: nota y selector de fecha', h.includes('nota de prueba') && h.includes('id="dayPick"'));
+chk('botones solo icono', restBtn(ds).includes('>🌴</button>') && invalidBtn(ds).includes('>⚠️</button>'));
+data.ratings=[{id:'rz',name:'Foco',color:'#000',icon:'',archived:false,desc:'1 disperso · 5 absorto'}];
+chk('descripción de valoración visible', ratingsHTML(ds).includes('1 disperso · 5 absorto'));
+chk('migrate añade dayNotes', typeof migrate({}).dayNotes==='object');
+})();
