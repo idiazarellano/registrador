@@ -365,3 +365,10 @@ chk('día con 2 h es bajo', lowDays([ds]).length===1 && Math.round(coveredOfDay(
 chk('aviso en Datos', lowDaysHTML([ds]).includes('mark-low-invalid'));
 data.invalidDays.push(dayKey(ds)); chk('marcado ya no avisa', lowDays([ds]).length===0); data.invalidDays=[];
 })();
+;(function(){
+const chk=(n,c)=>print((c?'OK  ':'FAIL')+' '+n);
+const ds=dayStart(Date.now())-5*86400000+3600000*12, H=3600000;
+data.entries=data.entries.filter(e=>e.cat!=='c8'); data.entries.push({id:'n1',cat:'c8',start:ds-H,end:ds+7*H},{id:'n2',cat:'c8',start:ds+15*H,end:ds+16*H});
+const n=nightOf(ds,'c8'); chk('noche: 23:00–7:00, sin la siesta', n&&n.dur===8*H&&n.bed===-H&&n.wake===7*H);
+chk('etiqueta noche', relLabel({c:'night:bed',rho:-0.3})==='acostarse antes' && relLabel({c:'night:dur',rho:0.3})==='noche más larga');
+})();

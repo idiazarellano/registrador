@@ -944,22 +944,43 @@ const REL_MIN_DAYS=10, REL_PERMS=1000;
 function rankArr(a){const s=a.map((v,i)=>[v,i]).sort((x,y)=>x[0]-y[0]),r=Array(a.length);for(let i=0;i<s.length;){let j=i;while(j+1<s.length&&s[j+1][0]===s[i][0])j++;for(let k=i;k<=j;k++)r[s[k][1]]=(i+j)/2;i=j+1;}return r;}
 function corrArr(x,y){const n=x.length;let mx=0,my=0;for(let i=0;i<n;i++){mx+=x[i];my+=y[i];}mx/=n;my/=n;let a=0,b=0,c=0;for(let i=0;i<n;i++){const dx=x[i]-mx,dy=y[i]-my;a+=dx*dy;b+=dx*dx;c+=dy*dy;}return b&&c?a/Math.sqrt(b*c):0;}
 let relCache={k:null,v:null};
+/* La noche que termina la mañana de `ds`: lo apuntado en la categoría de sueño entre las 18:00
+   del día anterior y las 14:00 de ese día. Las horas de acostarse y levantarse se miden desde la medianoche. */
+function nightOf(ds,cat){
+  const a=ds-6*HOUR, b=ds+14*HOUR;
+  const xs=data.entries.filter(e=>e.cat===cat&&e.start<b&&endOf(e)>a).map(e=>[Math.max(e.start,a),Math.min(endOf(e),b)]).sort((p,q)=>p[0]-q[0]);
+  if(!xs.length) return null;
+  return {dur:xs.reduce((t,[p,q])=>t+q-p,0), bed:xs[0][0]-ds, wake:xs[xs.length-1][1]-ds};
+}
+const NIGHT_KEYS=['night:dur','night:bed','night:wake'];
+function relLabel(t){
+  const up=t.rho>0;
+  if(t.c==='night:dur') return up?'noche más larga':'noche más corta';
+  if(t.c==='night:bed') return up?'acostarse más tarde':'acostarse antes';
+  if(t.c==='night:wake') return up?'levantarse más tarde':'levantarse antes';
+  return (up?'más ':'menos ')+esc(unitById(t.c).name)+(t.prev?' el día anterior':'');
+}
 function ratingRelations(days){
   const key=data.meta.updated+'|'+state.level+'|'+days.join(',');
   if(relCache.k===key) return relCache.v;
   const tests=[], counts={};
   for(const r of activeRatings()){
     const ks=days.filter(ds=>ratingOf(r.id,ds)); counts[r.id]=ks.length; if(ks.length<REL_MIN_DAYS) continue;
-    const per=ks.map(ds=>{const m=new Map();for(const g of segmentsOfDay(ds))m.set(U(g.e.cat),(m.get(U(g.e.cat))||0)+g.ms);return m;});
-    const notes=ks.map(ds=>ratingOf(r.id,ds)), y=rankArr(notes), avgNote=notes.reduce((a,b)=>a+b,0)/notes.length;
-    const ids=new Set(per.flatMap(m=>[...m.keys()]));
-    for(const c of ids){
-      const xv=per.map(m=>m.get(c)||0); if(xv.filter(v=>v>0).length<4) continue;
+    const night=r.night&&data.categories.some(c=>c.id===r.night)?r.night:null;
+    // Con noche: el tiempo de cada categoría es el del día anterior (el que precede a esa noche), sin contar el sueño.
+    const per=ks.map(ds=>{const m=new Map(), day=night?dayStart(ds-DAY+HOUR*12):ds;for(const g of segmentsOfDay(day)){ if(night&&g.e.cat===night) continue; m.set(U(g.e.cat),(m.get(U(g.e.cat))||0)+g.ms);} return m;});
+    const nights=night?ks.map(ds=>nightOf(ds,night)):null;
+    const notes=ks.map(ds=>ratingOf(r.id,ds)), avgNote=notes.reduce((a,b)=>a+b,0)/notes.length;
+    const series=[...new Set(per.flatMap(m=>[...m.keys()]))].map(c=>({c,xv:per.map(m=>m.get(c)||0),idx:ks.map((_,i)=>i),prev:!!night}));
+    if(night) for(const k of NIGHT_KEYS){ const idx=ks.map((_,i)=>i).filter(i=>nights[i]); series.push({c:k,xv:idx.map(i=>nights[i][k.slice(6)]),idx,abs:true}); }
+    for(const sr of series){
+      const {c,xv,idx}=sr; if(idx.length<REL_MIN_DAYS||(!sr.abs&&xv.filter(v=>v>0).length<4)) continue;
+      const nt=idx.map(i=>notes[i]), y=rankArr(nt);
       const x=rankArr(xv), rho=corrArr(x,y); if(!rho) continue;
       let seed=12345, hit=0; const rnd=()=>(seed=seed*16807%2147483647)/2147483647, yy=y.slice();
       for(let t=0;t<REL_PERMS;t++){ for(let i=yy.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1)),tmp=yy[i];yy[i]=yy[j];yy[j]=tmp;} if(Math.abs(corrArr(x,yy))>=Math.abs(rho)-1e-12) hit++; }
-      const hi=xv.filter((_,i)=>notes[i]>=avgNote), lo=xv.filter((_,i)=>notes[i]<avgNote), m=l=>l.length?l.reduce((a,b)=>a+b,0)/l.length:0;
-      tests.push({r:r.id,c,rho,p:(hit+1)/(REL_PERMS+1),d:m(hi)-m(lo)});
+      const hi=xv.filter((_,i)=>nt[i]>=avgNote), lo=xv.filter((_,i)=>nt[i]<avgNote), m=l=>l.length?l.reduce((a,b)=>a+b,0)/l.length:0;
+      tests.push({r:r.id,c,rho,p:(hit+1)/(REL_PERMS+1),d:m(hi)-m(lo),prev:sr.prev});
     }
   }
   tests.sort((a,b)=>a.p-b.p); const n=tests.length;
@@ -979,7 +1000,7 @@ function statsRatingsHTML(days,prevDays){
     const nr=rel.counts[r.id]||0, sig=rel.tests.filter(t=>t.r===r.id&&t.q<alpha());
     const pct=v=>String(Math.round(v*100))+' %';
     const cx=nr<REL_MIN_DAYS?`Relaciones: hacen falta ${REL_MIN_DAYS} días puntuados en el periodo (hay ${nr}).`
-      :sig.length?'Con mejor nota: '+sig.map(t=>`${t.rho>0?'más':'menos'} ${esc(unitById(t.c).name)} <b class="num">${t.d>0?'+':'−'}${fmtDur(Math.abs(t.d))}</b> <span title="Correlación de rangos; probabilidad corregida de ser casualidad: ${pct(t.q)}">(ρ ${t.rho.toFixed(2).replace('.',',').replace('-','−')})</span>`).join(' · ')+'.'
+      :sig.length?'Con mejor nota: '+sig.map(t=>`${relLabel(t)} <b class="num">${t.d>0?'+':'−'}${fmtDur(Math.abs(t.d))}</b> <span title="Correlación de rangos; probabilidad corregida de ser casualidad: ${pct(t.q)}">(ρ ${t.rho.toFixed(2).replace('.',',').replace('-','−')})</span>`).join(' · ')+'.'
       :`Ninguna relación clara con exigencia del ${pct(alpha())}.`;
     return `<div class="balance">
       <div class="balhead"><span>${r.icon?r.icon+' ':''}${esc(r.name)}</span><small><b class="num" style="color:var(--ink);font-size:15px">${cur.m.toFixed(1).replace('.',',')}</b> de media · ${cur.n}/${days.length} días${prev?` · antes ${prev.m.toFixed(1).replace('.',',')}`:''}</small></div>
@@ -1530,7 +1551,7 @@ function kindListHTML(kind,title,desc,addLabel){
 function kindById(kind,id){return kind==='group'?groupById(id):kind==='mark'?markById(id):kind==='balance'?balById(id):kind==='rating'?ratingById(id):catById(id);}
 function openKindEdit(kind,id){
   const o=kindById(kind,id);
-  state.catEdit={kind,id:o.id,name:o.name,color:o.color,icon:o.icon||''};
+  state.catEdit={kind,id:o.id,name:o.name,color:o.color,icon:o.icon||'',night:o.night||''};
   if(kind==='balance'){state.catEdit.a=o.a.label;state.catEdit.b=o.b.label;}
   if(kind==='group') state.catEdit.cats=data.categories.filter(c=>c.group===o.id).map(c=>c.id);
   if(!kind) state.catEdit.group=o.group||null;
@@ -1711,6 +1732,8 @@ function renderSheet(){
       ${isGroup?`<div class="field"><div class="label">Categorías</div><div class="catpick">${data.categories.filter(x=>!x.archived||c.cats.includes(x.id)).map(x=>{const other=x.group&&x.group!==c.id&&data.groups.some(g=>g.id===x.group)?groupById(x.group).name:'';
           return `<button data-gcat="${x.id}" class="${c.cats.includes(x.id)?'on':''}"><i class="dot" style="background:${x.color}"></i>${esc(x.name)}${other?`<span style="font-weight:500;color:var(--ink-3)"> · en ${esc(other)}</span>`:''}</button>`;}).join('')}</div>
         <p class="desc" style="margin:0;font-size:12px;color:var(--ink-3)">Una categoría solo puede estar en una supercategoría: si ya estaba en otra, se cambia a esta.</p></div>`:''}
+      ${isRate?`<div class="field"><div class="label">¿Puntúa la noche anterior?</div><div class="catpick"><button data-rnight="" class="${c.night?'':'on'}">No</button>${activeCats().map(x=>`<button data-rnight="${x.id}" class="${x.id===c.night?'on':''}"><i class="dot" style="background:${x.color}"></i>${esc(x.name)}</button>`).join('')}</div>
+        <p class="desc" style="margin:0;font-size:12px;color:var(--ink-3)">Elige la categoría con la que apuntas el sueño. Así, en Datos, la nota se relaciona con esa noche entera (hora de acostarse, de levantarse y duración) y con lo que hiciste el día anterior, en lugar de con el día natural.</p></div>`:''}
       ${isCat?`<div class="field"><div class="label">Supercategoría</div><div class="catpick"><button data-cgroup="" class="${c.group?'':'on'}">Ninguna</button>${data.groups.map(g=>`<button data-cgroup="${g.id}" class="${g.id===c.group?'on':''}"><i class="dot" style="background:${g.color}"></i>${esc(g.name)}</button>`).join('')}<button data-act="new-group-from-cat" style="background:transparent;border:2px dashed var(--line);color:var(--ink-2)">+ Nueva</button></div></div>`:''}
       <div class="field"><div class="row spread"><div class="label">Icono (opcional)</div><input class="text" id="catIcon" value="${esc(c.icon||'')}" placeholder="emoji" maxlength="4" style="width:80px;text-align:center" autocomplete="off"></div>
         <div class="iconscroll"><div class="iconpick"><button data-icon="" class="${!c.icon?'on':''}" aria-label="Sin icono">∅</button></div>
@@ -1799,6 +1822,7 @@ document.addEventListener('click',ev=>{
   if(d.tdone){const t=data.tasks.find(x=>x.id===d.tdone);if(t){t.done=!t.done;t.doneAt=t.done?Date.now():0;save();render();}return;}
   if(d.task){const t=data.tasks.find(x=>x.id===d.task);if(t){state.taskEdit={id:t.id,text:t.text,cat:t.cat};state.sheet='task';renderSheet();}return;}
   if(d.gcat){const l=state.catEdit.cats;state.catEdit.cats=l.includes(d.gcat)?l.filter(x=>x!==d.gcat):l.concat(d.gcat);t.classList.toggle('on');return;}
+  if(d.rnight!=null){state.catEdit.night=d.rnight;document.querySelectorAll('[data-rnight]').forEach(b=>b.classList.toggle('on',b.dataset.rnight===d.rnight));return;}
   if(d.cgroup!=null){state.catEdit.group=d.cgroup||null;document.querySelectorAll('[data-cgroup]').forEach(b=>b.classList.toggle('on',b.dataset.cgroup===d.cgroup));return;}
   if(d.taskcat){state.taskEdit.cat=d.taskcat;document.querySelectorAll('[data-taskcat]').forEach(b=>b.classList.toggle('on',b.dataset.taskcat===d.taskcat));return;}
   if(d.start){ if(lp.fired){lp.fired=false;return;} startCategory(d.start);return;}
@@ -1944,8 +1968,8 @@ document.addEventListener('click',ev=>{
         else data.balances.push({id:uid(),name,color:ce.color,icon,archived:false,a:{label:la},b:{label:lb}});
       }
       else if(ce.kind==='rating'){
-        if(ce.id){const r=ratingById(ce.id);r.name=name;r.color=ce.color;r.icon=icon;}
-        else data.ratings.push({id:uid(),name,color:ce.color,icon,archived:false});
+        if(ce.id){const r=ratingById(ce.id);r.name=name;r.color=ce.color;r.icon=icon;r.night=ce.night||null;}
+        else data.ratings.push({id:uid(),name,color:ce.color,icon,archived:false,night:ce.night||null});
       }
       else if(ce.kind==='mark'){
         if(ce.id){const m=markById(ce.id);m.name=name;m.color=ce.color;m.icon=icon;}
