@@ -62,11 +62,11 @@ const base=()=>reset([{cat:'c1',start:T(8),end:T(9)},{cat:'c2',start:T(9),end:T(
 const insert=(t,ds,de,cat='c2')=>{openInsertEditor(t);state.editing.cat=cat;state.editing.start+=ds*M;state.editing.end+=de*M;const pv=overlapPreview(state.editing);const ok=saveEditing();return {ok,pv};};
 const noGap=(a,b)=>{const s=data.entries.filter(e=>e.start>=a&&e.start<b).sort((x,y)=>x.start-y.start);for(let i=1;i<s.length;i++) if(s[i].start!==s[i-1].end) return false; return true;};
 let r;
-base(); r=insert(T(9),-15,-5); chk('caso del usuario −15/−5: '+show(), show()==='T08:00-08:45 O08:45-08:55 O08:55-10:00 T10:20-11:00'); chk('  preview: '+r.pv, r.pv==='Trabajo −15 min, Ocio +5 min');
+base(); r=insert(T(9),-15,-5); chk('caso del usuario −15/−5: '+show(), show()==='T08:00-08:45 O08:45-08:55 O09:00-10:00 T10:20-11:00'); chk('  preview: '+r.pv, r.pv==='Trabajo −15 min');
 base(); r=insert(T(9),-15,0); chk('−15 inicio: '+show(), show()==='T08:00-08:45 O08:45-09:00 O09:00-10:00 T10:20-11:00'); chk('  preview solo recorte: '+r.pv, r.pv==='Trabajo −15 min');
 base(); r=insert(T(9),0,10); chk('+10 fin: '+show(), show()==='T08:00-09:00 O09:00-09:10 O09:10-10:00 T10:20-11:00');
-base(); r=insert(T(9),5,15,'c1'); chk('+5 inicio +15 fin (hueco a la izquierda): '+show(), show()==='T08:00-09:05 T09:05-09:15 O09:15-10:00 T10:20-11:00'); chk('  preview: '+r.pv, r.pv==='Trabajo +5 min, Ocio −15 min');
-base(); r=insert(T(9),-20,-10); chk('−20/−10: '+show(), show()==='T08:00-08:40 O08:40-08:50 O08:50-10:00 T10:20-11:00');
+base(); r=insert(T(9),5,15,'c1'); chk('+5 inicio +15 fin (hueco a la izquierda): '+show(), show()==='T08:00-09:00 T09:05-09:15 O09:15-10:00 T10:20-11:00'); chk('  preview: '+r.pv, r.pv==='Ocio −15 min');
+base(); r=insert(T(9),-20,-10); chk('−20/−10: '+show(), show()==='T08:00-08:40 O08:40-08:50 O09:00-10:00 T10:20-11:00');
 base(); r=insert(T(9),-10,10); chk('a ambos lados: '+show(), show()==='T08:00-08:50 O08:50-09:10 O09:10-10:00 T10:20-11:00'); chk('  sin hueco', noGap(T(8),T(10)+M));
 base(); r=insert(T(9),0,0); chk('duración 0 no guarda', r.ok===false && data.entries.length===3);
 base(); r=insert(T(9),-5,-10); chk('fin antes que inicio no guarda', r.ok===false && data.entries.length===3);
@@ -75,15 +75,15 @@ base(); r=insert(T(9),0,70,'c1'); chk('cubre a b entero: '+show(), show()==='T08
 // el nuevo se lleva lejos (más allá de b): a no debe estirarse por encima de b
 base(); r=insert(T(9),75,85); chk('movido tras b, sin estirar a: '+show(), show()==='T08:00-09:00 O09:00-10:00 O10:15-10:25 T10:20-11:00'.replace('O10:15-10:25 T10:20-11:00','O10:15-10:25 T10:25-11:00'));
 // inserción en la unión con hueco real (b–c tiene 20 min): la unión es b|c a las 10:00? no hay círculo; pero probamos inserción a las 10:00 con +10: c no se acerca
-base(); r=insert(T(10),0,10); chk('unión b|c con hueco de 20: '+show(), show()==='T08:00-09:00 O09:00-10:00 O10:00-10:10 T10:20-11:00'.replace('T10:20-11:00','T10:10-11:00'));
+base(); r=insert(T(10),0,10); chk('unión b|c con hueco de 20: '+show(), show()==='T08:00-09:00 O09:00-10:00 O10:00-10:10 T10:20-11:00');
 // siguiente en marcha (end null)
-reset([{cat:'c1',start:T(8),end:T(9)},{cat:'c2',start:T(9),end:null}]); r=insert(T(9),-15,-5); chk('siguiente en marcha: '+show(), show()==='T08:00-08:45 O08:45-08:55 O08:55-…');
+reset([{cat:'c1',start:T(8),end:T(9)},{cat:'c2',start:T(9),end:null}]); r=insert(T(9),-15,-5); chk('siguiente en marcha: '+show(), show()==='T08:00-08:45 O08:45-08:55 O09:00-…');
 reset([{cat:'c1',start:T(8),end:T(9)},{cat:'c2',start:T(9),end:null}]); r=insert(T(9),0,10); chk('siguiente en marcha +10: '+show(), show()==='T08:00-09:00 O09:00-09:10 O09:10-…');
 // sin anterior / sin siguiente
-reset([{cat:'c2',start:T(9),end:T(10)}]); r=insert(T(9),-15,-5); chk('sin anterior: '+show(), show()==='O08:45-08:55 O08:55-10:00');
-reset([{cat:'c1',start:T(8),end:T(9)}]); r=insert(T(9),5,15); chk('sin siguiente: '+show(), show()==='T08:00-09:05 O09:05-09:15');
-// hueco oculto de 3 min (granularidad 1): se rellena también
-reset([{cat:'c1',start:T(8),end:T(9)},{cat:'c2',start:T(9)+3*M,end:T(10)}]); r=insert(T(9),-10,0); chk('hueco oculto de 3 min: '+show(), show()==='T08:00-08:50 O08:50-09:00 O09:00-10:00');
+reset([{cat:'c2',start:T(9),end:T(10)}]); r=insert(T(9),-15,-5); chk('sin anterior: '+show(), show()==='O08:45-08:55 O09:00-10:00');
+reset([{cat:'c1',start:T(8),end:T(9)}]); r=insert(T(9),5,15); chk('sin siguiente: '+show(), show()==='T08:00-09:00 O09:05-09:15');
+// hueco oculto de 3 min: ya no se rellena (un vecino no pasa de lo grabado)
+reset([{cat:'c1',start:T(8),end:T(9)},{cat:'c2',start:T(9)+3*M,end:T(10)}]); r=insert(T(9),-10,0); chk('hueco oculto de 3 min: '+show(), show()==='T08:00-08:50 O08:50-09:00 O09:03-10:00');
 // === ediciones normales: NO cambian (pueden dejar hueco a propósito) ===
 base(); state.editing={id:'e1',cat:'c2',start:T(9)+10*M,end:T(10),isNew:false}; saveEditing(); chk('editar b dejando hueco a propósito: '+show(), show()==='T08:00-09:00 O09:10-10:00 T10:20-11:00');
 base(); state.editing={id:'e1',cat:'c2',start:T(8)+30*M,end:T(10),isNew:false}; saveEditing(); chk('editar b solapando a: '+show(), show()==='T08:00-08:30 O08:30-10:00 T10:20-11:00');
@@ -95,6 +95,11 @@ base(); state.editing={id:'e0',cat:'c1',start:T(8),end:T(8)+30*M,isNew:false}; s
 base(); openInsertEditor(T(9)); closeSheet(); openEditor(data.entries[1]); chk('editor normal sin joint', !state.editing.joint);
 // círculos en el listado
 base(); const html=entriesListHTML(t0-86400000,true); chk('un círculo y un hueco', (html.match(/data-insert=/g)||[]).length===1&&(html.match(/entry gap/g)||[]).length===1);
+// un vecino recortado puede recuperar lo grabado, pero no pasar de ahí
+base(); state.editing={id:'e1',cat:'c2',start:T(8)+30*M,end:T(10),isNew:false}; saveEditing();
+state.editing={id:'e1',cat:'c2',start:T(9)+30*M,end:T(10),isNew:false,joint:{prev:'e0',next:null}}; saveEditing(); chk('vecino vuelve hasta lo grabado y no más: '+show(), show()==='T08:00-09:00 O09:30-10:00 T10:20-11:00');
+// deshacer recupera lo borrado por un solape
+base(); state.editing={id:'e1',cat:'c2',start:T(7),end:T(12),isNew:false}; saveEditing(); undoEntries(); chk('deshacer tras solape: '+show(), show()==='T08:00-09:00 O09:00-10:00 T10:20-11:00');
 print(fails?('FALLOS: '+fails):'TODO OK');
 })();
 ;(function(){
@@ -110,7 +115,7 @@ chk('rellenar sobre el inicio del que está en marcha: '+show(), data.entries.le
 // inserción dentro de un registro largo: cabecera al anterior, cola al siguiente, nada perdido
 reset([{cat:'c1',start:T(8),end:T(9)},{cat:'c2',start:T(9),end:T(12)}]);
 openInsertEditor(T(9)); state.editing.cat='c1'; state.editing.start+=30*M; state.editing.end+=60*M; saveEditing();
-chk('nuevo dentro de b: '+show(), show()==='T08:00-09:30 T09:30-10:00 O10:00-12:00');
+chk('nuevo dentro de b: '+show(), show()==='T08:00-09:00 T09:30-10:00 O10:00-12:00');
 // inserción que se lleva lejos hacia atrás: no se estira b sobre a
 reset([{cat:'c1',start:T(8),end:T(9)},{cat:'c2',start:T(9),end:T(10)}]);
 openInsertEditor(T(9)); state.editing.start-=90*M; state.editing.end-=80*M; saveEditing();

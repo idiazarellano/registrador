@@ -329,6 +329,7 @@ input.text{width:100%;border:1px solid var(--line);border-radius:10px;padding:10
 .list .mv:disabled{opacity:.3}
 .banner{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--accent-soft);font-size:13px}
 .banner .grow{flex:1}
+.toast-undo{margin-left:8px;background:var(--bg);color:var(--ink);border:0;border-radius:999px;padding:4px 10px;font:inherit;font-weight:800;cursor:pointer}
 .toast{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;z-index:40;box-shadow:var(--shadow);max-width:90vw;text-align:center}
 .mono-small{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
 .dayhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -568,21 +569,31 @@ function stopRunningAt(ms){
   const r=running(); if(!r) return;
   if(ms<=r.start){discardRunning(r);return;}
   if(ms>roundTo(Date.now())){toast('El fin no puede ser futuro');render();return;}
-  r.end=ms; const m=resolveOverlaps(r); if(m) toast(m);
-  state.pendEnd=null; save(); render(); toast('Finalizada a las '+fmtTime(ms));
+  snapEntries(); r.end=ms; recorded(r,r.start,ms); const m=resolveOverlaps(r);
+  state.pendEnd=null; save(); render(); m?toastUndo('Finalizada a las '+fmtTime(ms)+'. '+m):toast('Finalizada a las '+fmtTime(ms));
 }
 /* Una actividad que al redondear no llega a durar ni un paso (menos de medio paso
    de reloj) no deja rastro: se descarta en lugar de guardarse con duración cero. */
 function discardRunning(r){ data.entries=data.entries.filter(e=>e!==r); state.pendEnd=null; save(); render(); toast('Registro descartado: duraba menos de '+STEP()+' min'); }
-function stopRunning(){const r=running(); if(!r) return; state.pendEnd=null; r.end=roundTo(Date.now()); if(r.end<=r.start){discardRunning(r);return;} save(); render();}
+function stopRunning(){const r=running(); if(!r) return; state.pendEnd=null; r.end=roundTo(Date.now()); if(r.end<=r.start){discardRunning(r);return;} recorded(r,r.start,r.end); save(); render();}
 /* Recorta los registros vecinos para que no se solapen con `e`.
    Si un vecino queda sin duración, se elimina. Devuelve un texto para avisar. */
+/* Lo que se grabó de cada registro (os/oe). Los ajustes automáticos pueden recortar un registro,
+   pero al alargarlo de nuevo nunca pasa de lo grabado: sirve para corregir, no para sumar tiempo. */
+function remember(x){ if(x.os==null) x.os=x.start; if(x.oe==null&&x.end!=null) x.oe=x.end; }
+function recorded(x,start,end){ x.os=start; if(end!=null) x.oe=end; else delete x.oe; }
+/* Deshacer: copia de los registros antes de un cambio que puede tocar a otros. */
+let undoSnap=null;
+function snapEntries(){ undoSnap=JSON.stringify(data.entries); }
+function undoEntries(){ if(!undoSnap) return; data.entries=JSON.parse(undoSnap); undoSnap=null; state.pendEnd=null; sortEntries(); save(); render(); toast('Deshecho'); }
+function toastUndo(msg){ const t=$('#toast'); t.textContent=msg+' '; const b=document.createElement('button'); b.textContent='Deshacer'; b.className='toast-undo'; b.onclick=undoEntries; t.appendChild(b); t.className='toast'; t.hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.hidden=true,7000); }
 function resolveOverlaps(e){
   const en=endOf(e); let msg=[];
   for(const x of [...data.entries]){
     if(x===e) continue;
     const xe=endOf(x);
     if(xe<=e.start||x.start>=en) continue;            // sin solape
+    remember(x);
     if(x.start<e.start&&xe>e.start){ x.end=e.start; }   // anterior: se acorta por el final
     else if(x.start<en&&xe>en){ x.start=en; }              // siguiente (aunque esté en marcha): empieza más tarde
     else if(x.end!=null){ data.entries=data.entries.filter(y=>y!==x); msg.push('eliminado '+catById(x.cat).name); continue; } // cubierto del todo
@@ -591,7 +602,7 @@ function resolveOverlaps(e){
   }
   return msg.length?'Registro anterior '+msg.join(', '):'';
 }
-function deleteEntry(id){data.entries=data.entries.filter(e=>e.id!==id);save();}
+function deleteEntry(id){snapEntries();data.entries=data.entries.filter(e=>e.id!==id);save();}
 /* Texto con lo que pasará a los demás registros al guardar `ed`: se simula el guardado sobre una copia. */
 function overlapPreview(ed){
   const en=ed.end==null?Date.now():ed.end; if(en-ed.start<MIN) return '';
@@ -826,7 +837,7 @@ function statsMarksHTML(days){
   return `<section class="card"><div class="section-head"><h2>Marcas</h2><span class="label">${days.length} días</span></div>
     <div class="list" style="margin-top:4px">${ms.map(m=>{
       const n=days.filter(ds=>isMarked(m.id,ds)).length, st=markStreak(m.id);
-      return `<div><span class="grow">${m.icon?m.icon+' ':''}${esc(m.name)}<br><span class="desc">${st?`racha de ${st} ${st===1?'día':'días'}`:'sin racha en marcha'}</span></span><span class="num" style="font-weight:800">${n}/${days.length}</span></div>`;
+      return `<div><span class="grow">${m.icon?m.icon+' ':''}${esc(m.name)}<br><span class="desc">${st?`racha de ${st} ${st===1?'día':'días'}`:'sin racha en marcha'}</span></span><span class="num" style="font-weight:800">${n}/${days.length}${n?`<br><span class="desc">1 de cada ${Math.round(days.length/n)} días</span>`:''}</span></div>`;
     }).join('')}</div></section>`;
 }
 
@@ -1553,19 +1564,20 @@ function jointFill(ed,target,apply){
   // vecinos que se ajustarán aquí (y por tanto no cuentan como "otro registro" entre medias)
   const prevAdj=!!(prev&&prev.end!=null&&prev.start<ts), nextAdj=!!(next&&next!==prev&&endOf(next)>en);
   const between=(a,b)=>data.entries.some(x=>{ if((x===prev&&prevAdj)||(x===next&&nextAdj)) return false; const c=clipped(x); return c&&c[0]<b&&c[1]>a; });
-  if(prevAdj&&prev.end!==ts&&(prev.end>ts||!between(prev.end,ts))){ out.push(prev); if(apply) prev.end=ts; }
-  if(nextAdj&&next.start!==en&&(next.start<en||!between(en,next.start))){ out.push(next); if(apply) next.start=en; }
+  if(prevAdj&&prev.end!==ts&&(prev.end>ts||!between(prev.end,ts))){ const v=prev.end>ts?ts:Math.min(ts,prev.oe??prev.end); if(v!==prev.end){ out.push(prev); if(apply){remember(prev);prev.end=v;} } }
+  if(nextAdj&&next.start!==en&&(next.start<en||!between(en,next.start))){ const v=next.start<en?en:Math.max(en,next.os??next.start); if(v!==next.start){ out.push(next); if(apply){remember(next);next.start=v;} } }
   return out;
 }
 function saveEditing(){
   const ed=state.editing; if(!ed) return false;
   if(ed.end!=null&&ed.end<ed.start) return false;
   if(ed.start>roundTo(Date.now())){toast('El inicio no puede ser futuro');return false;}
-  let target;
+  let target; snapEntries(); const others=()=>JSON.stringify(data.entries.filter(x=>x.id!==ed.id&&x!==target).map(x=>[x.id,x.start,x.end])), before=others();
   if(ed.isNew){ if(ed.end==null) ed.end=roundTo(Date.now()); if(ed.end-ed.start<MIN){toast('Duración mínima: 1 minuto');return false;} target={id:uid(),cat:ed.cat,start:ed.start,end:ed.end}; data.entries.push(target); }
   else { target=data.entries.find(x=>x.id===ed.id); if(target){target.cat=ed.cat;target.start=ed.start;target.end=ed.end;} }
-  if(target){ jointFill(ed,target,true); resolveOverlaps(target); }
-  sortEntries(); save(); closeSheet(); render(); toast('Guardado'); return true;
+  if(target){ recorded(target,target.start,target.end); jointFill(ed,target,true); resolveOverlaps(target); }
+  const touched=before!==others();
+  sortEntries(); save(); closeSheet(); render(); touched?toastUndo('Guardado; otros registros ajustados.'):toast('Guardado'); return true;
 }
 function newManualEntry(ds){
   const now=Date.now();
@@ -1582,9 +1594,9 @@ function setRunningStart(ns){
   const r=running(); if(!r) return false;
   if(ns>roundTo(Date.now())){toast('El inicio no puede ser futuro');return false;}
   const p=prevEntry(r), glued=p&&p.end!=null&&p.end===r.start;
-  r.start=ns;
-  if(glued&&ns>p.start&&ns<=roundTo(Date.now())) p.end=ns;
-  const m=resolveOverlaps(r); if(m) toast(m);
+  snapEntries(); r.start=ns; recorded(r,ns,null);
+  if(glued&&ns>p.start&&ns<=roundTo(Date.now())){ remember(p); p.end=ns<p.end?ns:Math.min(ns,p.oe); }
+  const m=resolveOverlaps(r); if(m) toastUndo(m);
   save(); return true;
 }
 function adjButtons(attr,plus){
